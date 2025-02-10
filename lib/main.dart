@@ -255,6 +255,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
 
   final ScrollController _hourlyController = ScrollController();
   final ScrollController _dailyController = ScrollController();
+  final ScrollController _mainScrollController = ScrollController();
 
   @override
   void initState() {
@@ -280,6 +281,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
 
   @override
   void dispose() {
+    _mainScrollController.dispose();
     _hourlyController.dispose();
     _dailyController.dispose();
     super.dispose();
@@ -325,9 +327,14 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
     }
 
     try {
-      // Get the current position.
+      // Use medium accuracy and a timeout to prevent long waits.
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        desiredAccuracy: LocationAccuracy.medium,
+      ).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw TimeoutException('Timed out waiting for location');
+        },
       );
 
       // Create a Location object using the coordinates.
@@ -341,6 +348,10 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
       );
 
       _selectLocation(location, isCurrent: true);
+    } on TimeoutException {
+      setState(() {
+        _errorMessage = 'Location request timed out. Try again later.';
+      });
     } catch (e) {
       setState(() {
         _errorMessage = 'Error getting location: ${e.toString()}';
@@ -397,10 +408,17 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
 
     setState(() => _isRefreshing = true);
     await _fetchWeather();
-    setState(() {
-      _isRefreshing = false;
-      _lastUpdated = DateTime.now();
-    });
+    if (mounted) {
+      setState(() {
+        _isRefreshing = false;
+        _lastUpdated = DateTime.now();
+      });
+      _mainScrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   void _onSearchChanged() {
@@ -659,23 +677,13 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 if (_lastUpdated != null)
                   Text(
                     'Updated: ${DateFormat.jm().format(_lastUpdated!)}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
-                IconButton.filled(
-                  icon: _isRefreshing
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.refresh),
-                  onPressed: _isRefreshing ? null : _refreshWeather,
-                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -857,7 +865,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: SizedBox(
-          height: 160,
+          height: 200, // Increased height from 160 to 200
           child: Scrollbar(
             thumbVisibility: true,
             controller: _hourlyController,
@@ -876,7 +884,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                     weatherDescriptions[weatherCode] ?? 'Unknown';
 
                 return Container(
-                  width: 100,
+                  width: 120,
                   margin: const EdgeInsets.symmetric(horizontal: 4),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -891,7 +899,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                     ),
                   ),
                   padding:
-                      const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
@@ -914,8 +922,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                             const TextStyle(fontSize: 10, color: Colors.grey),
                       ),
                       if (precipitation != null &&
-                          actualIndex < precipitation.length &&
-                          precipitation[actualIndex] > 20)
+                          actualIndex < precipitation.length)
                         Text(
                           '${precipitation[actualIndex].round()}%',
                           style:
@@ -942,6 +949,8 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
     final List<dynamic> maxTemps = _weatherData!.daily['temperature_2m_max'];
     final List<dynamic> minTemps = _weatherData!.daily['temperature_2m_min'];
     final List<dynamic> codes = _weatherData!.daily['weathercode'];
+    final List<dynamic>? precipPercents =
+        _weatherData!.daily['precipitation_probability_max'];
 
     return Card(
       elevation: 4,
@@ -950,7 +959,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: SizedBox(
-          height: 160,
+          height: 220, // Increased height to provide more vertical space
           child: Scrollbar(
             thumbVisibility: true,
             controller: _dailyController,
@@ -965,9 +974,13 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                 final int weatherCode = codes[index] as int;
                 final String weatherDescription =
                     weatherDescriptions[weatherCode] ?? 'Unknown';
+                final String precipText =
+                    (precipPercents != null && index < precipPercents.length)
+                        ? '${precipPercents[index].round()}%'
+                        : '0%';
 
                 return Container(
-                  width: 100,
+                  width: 120,
                   margin: const EdgeInsets.symmetric(horizontal: 4),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -982,7 +995,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                     ),
                   ),
                   padding:
-                      const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
@@ -1000,6 +1013,13 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                         textAlign: TextAlign.center,
                         style:
                             const TextStyle(fontSize: 10, color: Colors.grey),
+                      ),
+                      Text(
+                        precipText,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue,
+                        ),
                       ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -1051,11 +1071,27 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Weather App'),
+        actions: [
+          IconButton(
+            icon: _isRefreshing
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.refresh),
+            onPressed: _isRefreshing ? null : _refreshWeather,
+          ),
+        ],
       ),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
+              controller: _mainScrollController,
               child: ConstrainedBox(
                 constraints: BoxConstraints(
                   minHeight: constraints.maxHeight,
@@ -1063,6 +1099,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // ... existing widgets such as search bar, location suggestions, etc.
                     Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
