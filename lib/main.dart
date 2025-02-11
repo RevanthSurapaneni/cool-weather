@@ -115,7 +115,8 @@ class WeatherService {
         '&current_weather=true'
         '&hourly=temperature_2m,weathercode,precipitation_probability,apparent_temperature,wind_speed_10m,wind_direction_10m,uv_index,is_day'
         '&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max,wind_speed_10m_max'
-        '&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto'));
+        '&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'
+        '&timezone=auto'));
 
     if (response.statusCode == 200) {
       return WeatherData.fromJson(jsonDecode(response.body));
@@ -170,6 +171,7 @@ class WeatherData {
   final double feelsLike;
   final int windDirection;
   final bool isDay;
+  final DateTime currentWeatherTime; // Add this field
 
   WeatherData({
     required this.currentTemp,
@@ -183,6 +185,7 @@ class WeatherData {
     required this.feelsLike,
     required this.windDirection,
     required this.isDay,
+    required this.currentWeatherTime, // Add this field
   });
 
   factory WeatherData.fromJson(Map<String, dynamic> json) {
@@ -216,6 +219,8 @@ class WeatherData {
         isDay: currentIndex != -1
             ? (json['hourly']['is_day'][currentIndex] ?? 1) == 1
             : true,
+        currentWeatherTime:
+            DateTime.parse(json['current_weather']['time']), // Add this field
       );
     } catch (e) {
       throw Exception('Failed to parse weather data: $e');
@@ -704,7 +709,8 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                   duration: const Duration(milliseconds: 500),
                   child: _buildWeatherIcon(
                     _weatherData!.currentWeatherCode,
-                    DateTime.now(),
+                    _weatherData!
+                        .currentWeatherTime, // use the API-provided UTC time
                     60, // positional
                   ),
                 ),
@@ -844,19 +850,31 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
   }
 
   Widget _buildHourlyForecast() {
-    final List<String> time = List<String>.from(_weatherData!.hourly['time']);
+    final List<String> timeList =
+        List<String>.from(_weatherData!.hourly['time']);
     final List<dynamic> temps = _weatherData!.hourly['temperature_2m'];
     final List<dynamic> codes = _weatherData!.hourly['weathercode'];
     final List<dynamic>? precipitation =
         _weatherData!.hourly['precipitation_probability'];
 
-    final now = DateTime.now();
-    final currentHourIndex = time.indexWhere((timeStr) {
-      final dateTime = DateTime.parse(timeStr).toLocal();
-      return dateTime.hour == now.hour && dateTime.day == now.day;
+    // Use the location's current time from the API data.
+    final locationNow = _weatherData!.currentWeatherTime;
+    final currentHour = DateTime(
+        locationNow.year, locationNow.month, locationNow.day, locationNow.hour);
+
+    // Match using the API's timestamps (assumed to be in the local time of the location)
+    final int currentHourIndex = timeList.indexWhere((timeStr) {
+      final forecastTime = DateTime.parse(timeStr);
+      final forecastHour = DateTime(
+        forecastTime.year,
+        forecastTime.month,
+        forecastTime.day,
+        forecastTime.hour,
+      );
+      return forecastHour == currentHour;
     });
     final int startIndex = (currentHourIndex == -1) ? 0 : currentHourIndex;
-    final int itemCount = min(24, time.length - startIndex);
+    final int itemCount = min(24, timeList.length - startIndex);
 
     return Card(
       elevation: 4,
@@ -865,7 +883,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: SizedBox(
-          height: 200, // Increased height from 160 to 200
+          height: 200,
           child: Scrollbar(
             thumbVisibility: true,
             controller: _hourlyController,
@@ -876,8 +894,9 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
               itemCount: itemCount,
               itemBuilder: (context, index) {
                 final int actualIndex = startIndex + index;
-                final DateTime dateTime =
-                    DateTime.parse(time[actualIndex]).toLocal();
+                // Parse forecast time (without converting to device local time).
+                final DateTime forecastTime =
+                    DateTime.parse(timeList[actualIndex]);
                 final bool isCurrentHour = index == 0;
                 final int weatherCode = codes[actualIndex] as int;
                 final String weatherDescription =
@@ -906,7 +925,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                       Text(
                         isCurrentHour
                             ? 'Now'
-                            : DateFormat('ha').format(dateTime),
+                            : DateFormat('ha').format(forecastTime),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: isCurrentHour
@@ -914,7 +933,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                               : FontWeight.normal,
                         ),
                       ),
-                      _buildWeatherIcon(weatherCode, dateTime),
+                      _buildWeatherIcon(weatherCode, forecastTime),
                       Text(
                         weatherDescription,
                         textAlign: TextAlign.center,
