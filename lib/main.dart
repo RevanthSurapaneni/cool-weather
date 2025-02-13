@@ -480,10 +480,28 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
     }
   }
 
-  Widget _buildWeatherIcon(int code, [DateTime? dateTime, double? size = 40]) {
-    final isNight =
-        dateTime != null && (dateTime.hour >= 18 || dateTime.hour < 6);
-    final iconSize = size ?? 40.0;
+  /// Revised _buildWeatherIcon method comparing only the hours for sunrise/sunset.
+  Widget _buildWeatherIcon(
+    int code, [
+    DateTime? dateTime,
+    double? size = 40,
+    bool forceDay = false,
+    DateTime? sunrise,
+    DateTime? sunset,
+  ]) {
+    bool isNight;
+    if (forceDay || dateTime == null) {
+      isNight = false;
+    } else if (sunrise != null && sunset != null) {
+      final int forecastHour = dateTime.hour;
+      final int sunriseHour = sunrise.hour;
+      final int sunsetHour = sunset.hour;
+      // If the forecast hour is before sunrise or after sunset, it's night.
+      isNight = forecastHour < sunriseHour || forecastHour > sunsetHour;
+    } else {
+      isNight = dateTime.hour >= 18 || dateTime.hour < 6;
+    }
+    final double iconSize = size ?? 40.0;
 
     switch (code) {
       case 0: // Clear sky
@@ -505,127 +523,72 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
         return BoxedIcon(
           WeatherIcons.cloudy,
           size: iconSize,
-          color: const Color(0xFF62B2FF),
+          color: isNight ? const Color(0xFF486581) : const Color(0xFF62B2FF),
         );
       case 45: // Foggy
-        return BoxedIcon(
-          WeatherIcons.fog,
-          size: iconSize,
-          color: const Color(0xFF9FB3C8),
-        );
       case 48: // Depositing rime fog
         return BoxedIcon(
           WeatherIcons.fog,
           size: iconSize,
-          color: const Color(0xFF9FB3C8),
+          color: isNight ? const Color(0xFF7A8B9A) : const Color(0xFF9FB3C8),
         );
       case 51: // Light drizzle
         return BoxedIcon(
           WeatherIcons.sprinkle,
           size: iconSize,
-          color: const Color(0xFF4098D7),
+          color: isNight ? const Color(0xFF3178C6) : const Color(0xFF4098D7),
         );
       case 53: // Moderate drizzle
-        return BoxedIcon(
-          WeatherIcons.sprinkle,
-          size: iconSize,
-          color: const Color(0xFF4098D7),
-        );
       case 55: // Dense drizzle
         return BoxedIcon(
-          WeatherIcons.sprinkle,
+          WeatherIcons.rain_mix,
           size: iconSize,
-          color: const Color(0xFF4098D7),
+          color: isNight ? const Color(0xFF3178C6) : const Color(0xFF4098D7),
         );
       case 61: // Slight rain
-        return BoxedIcon(
-          WeatherIcons.rain,
-          size: iconSize,
-          color: const Color(0xFF3178C6),
-        );
       case 63: // Moderate rain
-        return BoxedIcon(
-          WeatherIcons.rain,
-          size: iconSize,
-          color: const Color(0xFF3178C6),
-        );
       case 65: // Heavy rain
         return BoxedIcon(
           WeatherIcons.rain,
           size: iconSize,
-          color: const Color(0xFF3178C6),
+          color: isNight ? const Color(0xFF25507A) : const Color(0xFF3178C6),
         );
       case 71: // Slight snow
-        return BoxedIcon(
-          WeatherIcons.snow,
-          size: iconSize,
-          color: const Color(0xFF90CDF4),
-        );
       case 73: // Moderate snow
-        return BoxedIcon(
-          WeatherIcons.snow,
-          size: iconSize,
-          color: const Color(0xFF90CDF4),
-        );
       case 75: // Heavy snow
-        return BoxedIcon(
-          WeatherIcons.snow,
-          size: iconSize,
-          color: const Color(0xFF90CDF4),
-        );
       case 77: // Snow grains
         return BoxedIcon(
           WeatherIcons.snow,
           size: iconSize,
-          color: const Color(0xFF90CDF4),
+          color: isNight ? const Color(0xFF607D8B) : const Color(0xFF90CDF4),
         );
       case 80: // Slight rain showers
-        return BoxedIcon(
-          WeatherIcons.showers,
-          size: iconSize,
-          color: const Color(0xFF2C5282),
-        );
       case 81: // Moderate rain showers
         return BoxedIcon(
           WeatherIcons.showers,
           size: iconSize,
-          color: const Color(0xFF2C5282),
+          color: isNight ? const Color(0xFF1F3E5A) : const Color(0xFF2C5282),
         );
       case 82: // Violent rain showers
         return BoxedIcon(
-          WeatherIcons.showers,
+          WeatherIcons.storm_showers,
           size: iconSize,
-          color: const Color(0xFF2C5282),
+          color: isNight ? const Color(0xFF1F3E5A) : const Color(0xFF2C5282),
         );
       case 85: // Slight snow showers
-        return BoxedIcon(
-          WeatherIcons.snow,
-          size: iconSize,
-          color: const Color(0xFF90CDF4),
-        );
       case 86: // Heavy snow showers
         return BoxedIcon(
           WeatherIcons.snow,
           size: iconSize,
-          color: const Color(0xFF90CDF4),
+          color: isNight ? const Color(0xFF607D8B) : const Color(0xFF90CDF4),
         );
       case 95: // Thunderstorm
-        return BoxedIcon(
-          WeatherIcons.thunderstorm,
-          size: iconSize,
-          color: const Color(0xFF805AD5),
-        );
       case 96: // Thunderstorm with slight hail
-        return BoxedIcon(
-          WeatherIcons.thunderstorm,
-          size: iconSize,
-          color: const Color(0xFF6B46C1),
-        );
       case 99: // Thunderstorm with heavy hail
         return BoxedIcon(
           WeatherIcons.thunderstorm,
           size: iconSize,
-          color: const Color(0xFF6B46C1),
+          color: isNight ? const Color(0xFF553C7B) : const Color(0xFF805AD5),
         );
       default:
         return BoxedIcon(
@@ -674,6 +637,39 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
 
   Widget _buildCurrentWeather() {
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    // Calculate current hour's index from hourly data.
+    String rainChance = '0%';
+    String feelsLikeTemp = 'N/A';
+    if (_weatherData != null && _weatherData!.hourly['time'] != null) {
+      final List<String> timeList =
+          List<String>.from(_weatherData!.hourly['time']);
+      final List<dynamic> precipitation =
+          _weatherData!.hourly['precipitation_probability'];
+      final List<dynamic> apparentTemps =
+          _weatherData!.hourly['apparent_temperature'];
+      final DateTime locationNow = _weatherData!.currentWeatherTime;
+      final DateTime currentHour = DateTime(locationNow.year, locationNow.month,
+          locationNow.day, locationNow.hour);
+      final int currentIndex = timeList.indexWhere((timeStr) {
+        final DateTime forecastTime = DateTime.parse(timeStr);
+        return forecastTime.year == currentHour.year &&
+            forecastTime.month == currentHour.month &&
+            forecastTime.day == currentHour.day &&
+            forecastTime.hour == currentHour.hour;
+      });
+
+      if (currentIndex != -1 &&
+          precipitation.isNotEmpty &&
+          currentIndex < precipitation.length) {
+        rainChance = '${precipitation[currentIndex].round()}%';
+      }
+      if (currentIndex != -1 &&
+          apparentTemps.isNotEmpty &&
+          currentIndex < apparentTemps.length) {
+        feelsLikeTemp = '${apparentTemps[currentIndex].round()}°';
+      }
+    }
+
     return Card(
       margin: EdgeInsets.all(isSmallScreen ? 16 : 24),
       child: Padding(
@@ -696,9 +692,10 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
               _isCurrentLocationSelected
                   ? 'Current Location'
                   : _selectedLocation?.displayName ?? '',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: Colors.blue[800],
-                  ),
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(color: Colors.blue[800]),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -709,9 +706,8 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                   duration: const Duration(milliseconds: 500),
                   child: _buildWeatherIcon(
                     _weatherData!.currentWeatherCode,
-                    _weatherData!
-                        .currentWeatherTime, // use the API-provided UTC time
-                    60, // positional
+                    _weatherData!.currentWeatherTime,
+                    60,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -746,7 +742,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                 _buildWeatherDetail(
                   Icons.thermostat,
                   'Feels like',
-                  '${_weatherData!.feelsLike.round()}°',
+                  feelsLikeTemp,
                 ),
                 _buildWeatherDetail(
                   Icons.wb_sunny,
@@ -761,7 +757,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                 _buildWeatherDetail(
                   Icons.water_drop,
                   'Rain chance',
-                  '${_weatherData!.daily['precipitation_probability_max'][0]}%',
+                  rainChance,
                 ),
                 _buildWeatherDetail(
                   Icons.wb_twilight,
@@ -933,7 +929,14 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                               : FontWeight.normal,
                         ),
                       ),
-                      _buildWeatherIcon(weatherCode, forecastTime),
+                      _buildWeatherIcon(
+                        weatherCode,
+                        forecastTime,
+                        40,
+                        false,
+                        _weatherData!.sunrise,
+                        _weatherData!.sunset,
+                      ),
                       Text(
                         weatherDescription,
                         textAlign: TextAlign.center,
@@ -1026,7 +1029,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                               isToday ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
-                      _buildWeatherIcon(weatherCode, date),
+                      _buildWeatherIcon(weatherCode, date, 40, true),
                       Text(
                         weatherDescription,
                         textAlign: TextAlign.center,
