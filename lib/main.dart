@@ -7,6 +7,7 @@ import 'dart:math' show min;
 import 'package:weather_icons/weather_icons.dart';
 import 'package:geolocator/geolocator.dart';
 
+
 const Map<int, String> weatherDescriptions = {
   0: 'Clear sky',
   1: 'Mainly clear',
@@ -257,6 +258,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
   DateTime? _lastUpdated;
   bool _isRefreshing = false;
   bool _isCurrentLocationSelected = false;
+  bool _ignoreSearchUpdates = false;
 
   final ScrollController _hourlyController = ScrollController();
   final ScrollController _dailyController = ScrollController();
@@ -286,52 +288,44 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    _focusNode.dispose();
     _mainScrollController.dispose();
     _hourlyController.dispose();
     _dailyController.dispose();
     super.dispose();
   }
 
+  // Improved _getCurrentLocation that groups updates
   Future<void> _getCurrentLocation() async {
+    String? error;
+    Location? location;
     setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
 
-    // Check if location services are enabled.
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      setState(() {
-        _errorMessage =
-            'Location services are disabled. Please enable them in settings.';
-        _isLoading = false;
-      });
-      return;
-    }
-
-    // Check and request location permissions.
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        setState(() {
-          _errorMessage =
-              'Location permissions are denied. Please enable them in settings.';
-          _isLoading = false;
-        });
-        return;
-      }
-    }
-    if (permission == LocationPermission.deniedForever) {
-      setState(() {
-        _errorMessage =
-            'Location permissions are permanently denied. Enable permissions from settings.';
-        _isLoading = false;
-      });
-      return;
-    }
-
+    // Check location services and permissions before fetching.
     try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled)
+        throw Exception(
+            'Location services are disabled. Please enable them in settings.');
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw Exception(
+              'Location permissions are denied. Please enable them in settings.');
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception(
+            'Location permissions are permanently denied. Enable permissions from settings.');
+      }
+
       // Use medium accuracy and a timeout to prevent long waits.
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.medium,
@@ -343,7 +337,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
       );
 
       // Create a Location object using the coordinates.
-      final location = Location(
+      location = Location(
         name:
             '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}',
         latitude: position.latitude,
@@ -351,36 +345,39 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
         country: '',
         state: '',
       );
-
-      _selectLocation(location, isCurrent: true);
-    } on TimeoutException {
-      setState(() {
-        _errorMessage = 'Location request timed out. Try again later.';
-      });
+    } on TimeoutException catch (e) {
+      error = 'Location request timed out. Try again later.';
     } catch (e) {
+      error = 'Error getting location: ${e.toString()}';
+    }
+
+    // Update state only once when location fetch is complete and then fetch weather.
+    if (mounted) {
       setState(() {
-        _errorMessage = 'Error getting location: ${e.toString()}';
+        _isLoading = false;
+        _errorMessage = error ?? '';
       });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+      if (location != null) {
+        _selectLocation(location, isCurrent: true);
       }
     }
   }
 
+  // Refined _selectLocation: Cancel debounce and immediately clear suggestions.
   void _selectLocation(Location location, {bool isCurrent = false}) {
+    _ignoreSearchUpdates = true;
+    _debounce?.cancel();
     setState(() {
       _selectedLocation = location;
       _isCurrentLocationSelected = isCurrent;
-      // Always update search field with whatever the location returns.
       _searchController.text = location.displayName;
       _locations = [];
       _errorMessage = '';
     });
-    _fetchWeather();
-    // Dismiss the keyboard.
+    // Once weather is fetched, allow further search updates.
+    _fetchWeather().whenComplete(() {
+      _ignoreSearchUpdates = false;
+    });
     FocusScope.of(context).unfocus();
   }
 
@@ -426,15 +423,21 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
     }
   }
 
+  // In _onSearchChanged, we add an explicit kIsWeb check if needed.
   void _onSearchChanged() {
-    if (_debounce?.isActive ?? false) _debounce?.cancel();
+    if (_ignoreSearchUpdates) return;
+    if (_selectedLocation != null &&
+        _searchController.text.trim() == _selectedLocation!.displayName) {
+      return;
+    }
+    _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
+      // On Web, additional ignore check (if needed) can go here.
+      if (_ignoreSearchUpdates) return;
       final searchText = _searchController.text.trim();
-      // Only search if there's actual text and length > 2
       if (searchText.isNotEmpty && searchText.length > 2) {
         _searchLocation(searchText);
       } else {
-        // Clear locations but don't show error if the field is empty
         setState(() {
           _locations = [];
           _errorMessage = '';
