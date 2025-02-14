@@ -115,7 +115,9 @@ Widget buildHourlyForecast(
                               fontSize: 12, color: Colors.blue)),
                     Text('${temps[idx].round()}°',
                         style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
+                            fontSize: 16,
+                            fontWeight: FontWeight.normal,
+                            color: Colors.black87)),
                   ],
                 ),
               );
@@ -198,7 +200,9 @@ Widget buildDailyForecast(
                     Text(
                         '${maxTemps[index].round()}° / ${minTemps[index].round()}°',
                         style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
+                            fontSize: 16,
+                            fontWeight: FontWeight.normal,
+                            color: Colors.black87)),
                   ],
                 ),
               );
@@ -387,13 +391,48 @@ class CurrentWeatherWidget extends StatelessWidget {
     }
   }
 
-  Widget _buildWeatherDetail(IconData icon, String label, String value) {
+  String _getAirQualityDescription(double pm25) {
+    if (pm25 <= 12.0) {
+      return 'Good';
+    } else if (pm25 <= 35.4) {
+      return 'Moderate';
+    } else if (pm25 <= 55.4) {
+      return 'Unhealthy for Sensitive Groups';
+    } else if (pm25 <= 150.4) {
+      return 'Unhealthy';
+    } else if (pm25 <= 250.4) {
+      return 'Very Unhealthy';
+    } else {
+      return 'Hazardous';
+    }
+  }
+
+  Color _getAirQualityColor(double pm25) {
+    if (pm25 <= 12.0) {
+      return Colors.lightGreen;
+    } else if (pm25 <= 35.4) {
+      return Colors.yellow;
+    } else if (pm25 <= 55.4) {
+      return Colors.orange;
+    } else if (pm25 <= 150.4) {
+      return Colors.red;
+    } else if (pm25 <= 250.4) {
+      return Colors.purple;
+    } else {
+      return Colors.brown;
+    }
+  }
+
+  // Updated _buildWeatherDetail: fixed width added for uniform sizing
+  Widget _buildWeatherDetail(IconData icon, String label, String value,
+      [Color? bgColor, Color? textColor]) {
     return Container(
+      width: 120, // fixed width for consistent box size
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF80DFFF), Color(0xFF3C8EDB)],
+        gradient: LinearGradient(
+          colors: [bgColor ?? const Color(0xFF80DFFF), const Color(0xFF3C8EDB)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -422,13 +461,13 @@ class CurrentWeatherWidget extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 16,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: textColor ?? Colors.white,
             ),
           ),
         ],
@@ -455,6 +494,17 @@ class CurrentWeatherWidget extends StatelessWidget {
     final isSmall = MediaQuery.of(context).size.width < 600;
     String rainChance = '0%';
     String feelsLikeTemp = 'N/A';
+    String airQualityDescription = 'Air quality data unavailable';
+    Color airQualityColor = Colors.grey;
+    String pm25Value = 'N/A';
+
+    if (weatherData.airQualityData != null) {
+      double pm25 = weatherData.airQualityData!.pm2_5;
+      pm25Value = pm25.toStringAsFixed(1);
+      airQualityDescription = _getAirQualityDescription(pm25);
+      airQualityColor = _getAirQualityColor(pm25);
+    }
+
     if (weatherData.hourly['time'] != null) {
       final List<String> timeList =
           List<String>.from(weatherData.hourly['time']);
@@ -559,18 +609,11 @@ class CurrentWeatherWidget extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 500),
-                  transitionBuilder: (child, animation) =>
-                      ScaleTransition(scale: animation, child: child),
-                  child: KeyedSubtree(
-                    key: ValueKey(weatherData.currentWeatherCode),
-                    child: _buildWeatherIcon(
-                      weatherData.currentWeatherCode,
-                      weatherData.currentWeatherTime,
-                      70,
-                    ),
-                  ),
+                // Removed AnimatedSwitcher for smooth icon update
+                _buildWeatherIcon(
+                  weatherData.currentWeatherCode,
+                  weatherData.currentWeatherTime,
+                  70,
                 ),
                 const SizedBox(width: 20),
                 Column(
@@ -606,16 +649,36 @@ class CurrentWeatherWidget extends StatelessWidget {
               runSpacing: 20,
               children: [
                 _buildWeatherDetail(
-                    Icons.thermostat, 'Feels like', feelsLikeTemp),
+                    Icons.thermostat, 'Feels like', feelsLikeTemp, null, null),
                 _buildWeatherDetail(Icons.wb_sunny, 'UV Index',
-                    _getUVDescription(weatherData.uvIndex)),
-                _buildWeatherDetail(Icons.navigation, 'Wind',
-                    '${weatherData.currentWindSpeed.round()} mph ${weatherData.getWindDirection()}'),
-                _buildWeatherDetail(Icons.water_drop, 'Rain', rainChance),
-                _buildWeatherDetail(Icons.wb_twilight, 'Sunrise',
-                    DateFormat('h:mm a').format(weatherData.sunrise)),
-                _buildWeatherDetail(Icons.nights_stay, 'Sunset',
-                    DateFormat('h:mm a').format(weatherData.sunset)),
+                    _getUVDescription(weatherData.uvIndex), null, null),
+                _buildWeatherDetail(
+                    Icons.navigation,
+                    'Wind',
+                    '${weatherData.currentWindSpeed.round()} mph ${weatherData.getWindDirection()}',
+                    null,
+                    null),
+                _buildWeatherDetail(
+                    Icons.water_drop, 'Rain', rainChance, null, null),
+                _buildWeatherDetail(
+                    Icons.wb_twilight,
+                    'Sunrise',
+                    DateFormat('h:mm a').format(weatherData.sunrise),
+                    null,
+                    null),
+                _buildWeatherDetail(
+                    Icons.nights_stay,
+                    'Sunset',
+                    DateFormat('h:mm a').format(weatherData.sunset),
+                    null,
+                    null),
+                _buildWeatherDetail(
+                  WeatherIcons.dust,
+                  'Air Quality',
+                  airQualityDescription,
+                  Color(0xFF80DFFF),
+                  airQualityColor,
+                ),
               ],
             ),
           ],
