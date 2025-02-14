@@ -33,6 +33,18 @@ class WeatherService {
     }
   }
 
+  static Future<AirQualityData> getAirQuality(double lat, double lon) async {
+    final response = await http.get(Uri.parse(
+        'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=$lat&longitude=$lon&hourly=pm2_5,pm10,carbon_monoxide,sulphur_dioxide,ozone,nitrogen_dioxide&timezone=auto'));
+
+    if (response.statusCode == 200) {
+      print('Air Quality API Response: ${response.body}'); // Log the response
+      return AirQualityData.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to load air quality data');
+    }
+  }
+
   static Future<WeatherData> getWeather(double lat, double lon) async {
     final response = await http.get(Uri.parse(
         '$baseUrl?latitude=$lat&longitude=$lon'
@@ -66,10 +78,10 @@ class Location {
 
   factory Location.fromJson(Map<String, dynamic> json) {
     return Location(
-      name: json['name'],
-      latitude: json['latitude'],
-      longitude: json['longitude'],
-      country: json['country'],
+      name: json['name'] ?? '',
+      latitude: json['latitude'] ?? 0.0,
+      longitude: json['longitude'] ?? 0.0,
+      country: json['country'] ?? '',
       state: json['admin1'],
     );
   }
@@ -94,6 +106,7 @@ class WeatherData {
   final int windDirection;
   final bool isDay;
   final DateTime currentWeatherTime;
+  AirQualityData? airQualityData;
 
   WeatherData({
     required this.currentTemp,
@@ -108,6 +121,7 @@ class WeatherData {
     required this.windDirection,
     required this.isDay,
     required this.currentWeatherTime,
+    this.airQualityData,
   });
 
   factory WeatherData.fromJson(Map<String, dynamic> json) {
@@ -116,7 +130,13 @@ class WeatherData {
     final List<String> hourlyTime = List<String>.from(json['hourly']['time']);
     final currentHourString =
         DateTime(now.year, now.month, now.day, now.hour).toIso8601String();
-    final currentIndex = hourlyTime.indexOf(currentHourString);
+    final currentIndex = hourlyTime.indexWhere((time) {
+      final forecastTime = DateTime.parse(time);
+      return forecastTime.year == now.year &&
+          forecastTime.month == now.month &&
+          forecastTime.day == now.day &&
+          forecastTime.hour == now.hour;
+    });
 
     try {
       return WeatherData(
@@ -151,5 +171,99 @@ class WeatherData {
   String getWindDirection() {
     const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
     return directions[((windDirection + 22.5) % 360) ~/ 45];
+  }
+}
+
+class AirQualityData {
+  final double pm2_5;
+  final double pm10;
+  final double carbon_monoxide;
+  final double sulphur_dioxide;
+  final double ozone;
+  final double nitrogen_dioxide;
+  final DateTime time;
+
+  AirQualityData({
+    required this.pm2_5,
+    required this.pm10,
+    required this.carbon_monoxide,
+    required this.sulphur_dioxide,
+    required this.ozone,
+    required this.nitrogen_dioxide,
+    required this.time,
+  });
+
+  factory AirQualityData.fromJson(Map<String, dynamic> json) {
+    final List<dynamic> timeList = json['hourly']['time'];
+    final now = DateTime.now();
+    final currentHourString =
+        DateTime(now.year, now.month, now.day, now.hour).toIso8601String();
+    final currentIndex = timeList.indexWhere((time) {
+      final forecastTime = DateTime.parse(time);
+      return forecastTime.year == now.year &&
+          forecastTime.month == now.month &&
+          forecastTime.day == now.day &&
+          forecastTime.hour == now.hour;
+    });
+
+    // Fallback to the first available time if the current time is not found
+    final fallbackIndex = currentIndex != -1 ? currentIndex : 0;
+
+    // Check if currentIndex is valid before accessing the lists
+    final pm2_5List = json['hourly']['pm2_5'] as List<dynamic>?;
+    final pm10List = json['hourly']['pm10'] as List<dynamic>?;
+    final carbon_monoxideList =
+        json['hourly']['carbon_monoxide'] as List<dynamic>?;
+    final sulphur_dioxideList =
+        json['hourly']['sulphur_dioxide'] as List<dynamic>?;
+    final ozoneList = json['hourly']['ozone'] as List<dynamic>?;
+    final nitrogen_dioxideList =
+        json['hourly']['nitrogen_dioxide'] as List<dynamic>?;
+
+    print('PM2.5 List: $pm2_5List'); // Log the PM2.5 list
+    print('Current Index: $currentIndex'); // Log the current index
+
+    final pm2_5 = (pm2_5List != null &&
+            fallbackIndex != -1 &&
+            fallbackIndex < pm2_5List.length)
+        ? (pm2_5List[fallbackIndex] as num?)?.toDouble() ?? 0.0
+        : 0.0;
+    final pm10 = (pm10List != null &&
+            fallbackIndex != -1 &&
+            fallbackIndex < pm10List.length)
+        ? (pm10List[fallbackIndex] as num?)?.toDouble() ?? 0.0
+        : 0.0;
+    final carbon_monoxide = (carbon_monoxideList != null &&
+            fallbackIndex != -1 &&
+            fallbackIndex < carbon_monoxideList.length)
+        ? (carbon_monoxideList[fallbackIndex] as num?)?.toDouble() ?? 0.0
+        : 0.0;
+    final sulphur_dioxide = (sulphur_dioxideList != null &&
+            fallbackIndex != -1 &&
+            fallbackIndex < sulphur_dioxideList.length)
+        ? (sulphur_dioxideList[fallbackIndex] as num?)?.toDouble() ?? 0.0
+        : 0.0;
+    final ozone = (ozoneList != null &&
+            fallbackIndex != -1 &&
+            fallbackIndex < ozoneList.length)
+        ? (ozoneList[fallbackIndex] as num?)?.toDouble() ?? 0.0
+        : 0.0;
+    final nitrogen_dioxide = (nitrogen_dioxideList != null &&
+            fallbackIndex != -1 &&
+            fallbackIndex < nitrogen_dioxideList.length)
+        ? (nitrogen_dioxideList[fallbackIndex] as num?)?.toDouble() ?? 0.0
+        : 0.0;
+
+    return AirQualityData(
+      pm2_5: pm2_5,
+      pm10: pm10,
+      carbon_monoxide: carbon_monoxide,
+      sulphur_dioxide: sulphur_dioxide,
+      ozone: ozone,
+      nitrogen_dioxide: nitrogen_dioxide,
+      time: (fallbackIndex != -1 && timeList.length > fallbackIndex)
+          ? DateTime.parse(timeList[fallbackIndex])
+          : DateTime.now(),
+    );
   }
 }

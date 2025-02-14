@@ -219,6 +219,18 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
         _selectedLocation!.latitude,
         _selectedLocation!.longitude,
       );
+      AirQualityData? airQuality;
+      try {
+        airQuality = await WeatherService.getAirQuality(
+          _selectedLocation!.latitude,
+          _selectedLocation!.longitude,
+        );
+        print('Air Quality Data: $airQuality'); // Log the air quality data
+        weather.airQualityData = airQuality;
+      } catch (e) {
+        // Log the error but don't stop the app from working
+        print('Failed to fetch air quality data: $e');
+      }
       setState(() {
         _weatherData = weather;
         _lastUpdated = DateTime.now();
