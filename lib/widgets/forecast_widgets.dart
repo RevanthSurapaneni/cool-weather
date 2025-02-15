@@ -559,8 +559,8 @@ class CurrentWeatherWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(
             colors: [
-              const Color.fromARGB(255, 156, 210, 255), // light blue
-              const Color.fromARGB(255, 255, 255, 255) // deep blue
+              const Color.fromARGB(255, 167, 215, 255),
+              const Color.fromARGB(255, 194, 216, 247)
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
