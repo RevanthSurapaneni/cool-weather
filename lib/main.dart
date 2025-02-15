@@ -144,15 +144,17 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
         country: '',
         state: '',
       );
-      _selectLocation(location, isCurrent: true);
+      await _selectLocation(location, isCurrent: true);
     } catch (e) {
-      setState(() => _errorMessage = e.toString());
-    } finally {
-      setState(() => _isLoading = false);
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
     }
   }
 
-  void _selectLocation(Location location, {bool isCurrent = false}) {
+  Future<void> _selectLocation(Location location,
+      {bool isCurrent = false}) async {
     _ignoreSearchUpdates = true;
     _debounce?.cancel();
     setState(() {
@@ -161,8 +163,13 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
       _searchController.text = location.displayName;
       _locations = [];
       _errorMessage = '';
+      _isLoading = true; // maintain loading while weather is fetched
     });
-    _fetchWeather().whenComplete(() => _ignoreSearchUpdates = false);
+    await _fetchWeather();
+    _ignoreSearchUpdates = false;
+    setState(() {
+      _isLoading = false; // now turn off loading after API call completes
+    });
     FocusScope.of(context).unfocus();
   }
 
