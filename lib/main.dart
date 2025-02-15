@@ -285,25 +285,81 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    TextField(
-                      controller: _searchController,
-                      focusNode: _focusNode,
-                      decoration: const InputDecoration(
-                        hintText: 'Search for a location',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.search),
+                    // Updated search bar with clear button and better styling
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        focusNode: _focusNode,
+                        decoration: InputDecoration(
+                          hintText: 'Search for a location',
+                          prefixIcon:
+                              const Icon(Icons.search, color: Colors.blue),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() {
+                                      _locations = [];
+                                      _errorMessage = '';
+                                    });
+                                  },
+                                )
+                              : null,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          fillColor: Colors.white,
+                          filled: true,
+                        ),
                       ),
                     ),
+                    // Updated search results with proper styling
                     if (_locations.isNotEmpty)
-                      ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: _locations.length,
-                        itemBuilder: (context, index) {
-                          return ListTile(
-                            title: Text(_locations[index].displayName),
-                            onTap: () => _selectLocation(_locations[index]),
-                          );
-                        },
+                      Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        constraints: const BoxConstraints(maxHeight: 300),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: _locations.length,
+                          separatorBuilder: (context, index) =>
+                              const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            return ListTile(
+                              title: Text(_locations[index].displayName),
+                              onTap: () => _selectLocation(_locations[index]),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              trailing:
+                                  const Icon(Icons.arrow_forward_ios, size: 16),
+                            );
+                          },
+                        ),
                       ),
                   ],
                 ),
