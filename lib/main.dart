@@ -48,6 +48,8 @@ class MyApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
         useMaterial3: true,
+        fontFamily: 'Poppins', // updated font family to Poppins
+        // Reverted scaffoldBackgroundColor and appBarTheme to original settings
         appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
         cardTheme: CardTheme(
           elevation: 2,
@@ -55,9 +57,25 @@ class MyApp extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
           ),
         ),
-        textTheme: const TextTheme(
-          headlineSmall:
-              TextStyle(fontWeight: FontWeight.bold, letterSpacing: -0.5),
+        textTheme: TextTheme(
+          headlineSmall: const TextStyle(
+            fontFamily: 'Poppins', // updated font family to Poppins
+            fontWeight: FontWeight.bold,
+            letterSpacing: -0.5,
+          ),
+          titleMedium: const TextStyle(
+            fontFamily: 'Poppins', // updated font family to Poppins
+            fontSize: 20,
+            color: Colors.blue,
+          ),
+          bodyLarge: const TextStyle(
+            fontFamily: 'Poppins', // updated font family to Poppins
+            fontSize: 16,
+          ),
+          bodyMedium: const TextStyle(
+            fontFamily: 'Poppins', // updated font family to Poppins
+            fontSize: 14,
+          ),
         ),
       ),
       home: const WeatherHomePage(),
@@ -387,14 +405,6 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                   isCurrentLocationSelected: _isCurrentLocationSelected,
                   selectedLocation: _selectedLocation,
                 ),
-                if (_lastUpdated != null)
-                  Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Text(
-                      'Updated: ${DateFormat.jm().format(_lastUpdated!)}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
                 buildHourlyForecast(
                   _weatherData!.hourly,
                   _weatherData!.currentWeatherTime,

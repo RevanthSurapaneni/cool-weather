@@ -544,7 +544,10 @@ class CurrentWeatherWidget extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(
-            colors: [Colors.blue.shade100, Colors.white],
+            colors: [
+              const Color.fromARGB(255, 140, 203, 255), // light blue
+              const Color.fromARGB(255, 255, 255, 255) // deep blue
+            ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -554,7 +557,6 @@ class CurrentWeatherWidget extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header: updated "Updated:" container with plain background
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -563,7 +565,7 @@ class CurrentWeatherWidget extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white, // Removed gradient
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: [
                         BoxShadow(
@@ -580,7 +582,7 @@ class CurrentWeatherWidget extends StatelessWidget {
                             size: 16, color: Colors.blue),
                         const SizedBox(width: 4),
                         Text(
-                          'Updated: ${DateFormat.jm().format(lastUpdated!)}',
+                          'Updated: ${DateFormat('h.mm a').format(lastUpdated!)}',
                           style: Theme.of(context)
                               .textTheme
                               .bodySmall
@@ -589,7 +591,7 @@ class CurrentWeatherWidget extends StatelessWidget {
                       ],
                     ),
                   ),
-                Icon(Icons.wb_sunny, color: Colors.amber, size: 24),
+                const Icon(Icons.wb_sunny, color: Colors.amber, size: 24),
               ],
             ),
             const SizedBox(height: 16),
