@@ -212,12 +212,12 @@ class AirQualityData {
     // Check if currentIndex is valid before accessing the lists
     final pm2_5List = json['hourly']['pm2_5'] as List<dynamic>?;
     final pm10List = json['hourly']['pm10'] as List<dynamic>?;
-    final carbon_monoxideList =
+    final carbonMonoxidelist =
         json['hourly']['carbon_monoxide'] as List<dynamic>?;
-    final sulphur_dioxideList =
+    final sulphurDioxidelist =
         json['hourly']['sulphur_dioxide'] as List<dynamic>?;
     final ozoneList = json['hourly']['ozone'] as List<dynamic>?;
-    final nitrogen_dioxideList =
+    final nitrogenDioxidelist =
         json['hourly']['nitrogen_dioxide'] as List<dynamic>?;
 
     print('PM2.5 List: $pm2_5List'); // Log the PM2.5 list
@@ -233,34 +233,34 @@ class AirQualityData {
             fallbackIndex < pm10List.length)
         ? (pm10List[fallbackIndex] as num?)?.toDouble() ?? 0.0
         : 0.0;
-    final carbon_monoxide = (carbon_monoxideList != null &&
+    final carbonMonoxide = (carbonMonoxidelist != null &&
             fallbackIndex != -1 &&
-            fallbackIndex < carbon_monoxideList.length)
-        ? (carbon_monoxideList[fallbackIndex] as num?)?.toDouble() ?? 0.0
+            fallbackIndex < carbonMonoxidelist.length)
+        ? (carbonMonoxidelist[fallbackIndex] as num?)?.toDouble() ?? 0.0
         : 0.0;
-    final sulphur_dioxide = (sulphur_dioxideList != null &&
+    final sulphurDioxide = (sulphurDioxidelist != null &&
             fallbackIndex != -1 &&
-            fallbackIndex < sulphur_dioxideList.length)
-        ? (sulphur_dioxideList[fallbackIndex] as num?)?.toDouble() ?? 0.0
+            fallbackIndex < sulphurDioxidelist.length)
+        ? (sulphurDioxidelist[fallbackIndex] as num?)?.toDouble() ?? 0.0
         : 0.0;
     final ozone = (ozoneList != null &&
             fallbackIndex != -1 &&
             fallbackIndex < ozoneList.length)
         ? (ozoneList[fallbackIndex] as num?)?.toDouble() ?? 0.0
         : 0.0;
-    final nitrogen_dioxide = (nitrogen_dioxideList != null &&
+    final nitrogenDioxide = (nitrogenDioxidelist != null &&
             fallbackIndex != -1 &&
-            fallbackIndex < nitrogen_dioxideList.length)
-        ? (nitrogen_dioxideList[fallbackIndex] as num?)?.toDouble() ?? 0.0
+            fallbackIndex < nitrogenDioxidelist.length)
+        ? (nitrogenDioxidelist[fallbackIndex] as num?)?.toDouble() ?? 0.0
         : 0.0;
 
     return AirQualityData(
       pm2_5: pm2_5,
       pm10: pm10,
-      carbon_monoxide: carbon_monoxide,
-      sulphur_dioxide: sulphur_dioxide,
+      carbon_monoxide: carbonMonoxide,
+      sulphur_dioxide: sulphurDioxide,
       ozone: ozone,
-      nitrogen_dioxide: nitrogen_dioxide,
+      nitrogen_dioxide: nitrogenDioxide,
       time: (fallbackIndex != -1 && timeList.length > fallbackIndex)
           ? DateTime.parse(timeList[fallbackIndex])
           : DateTime.now(),

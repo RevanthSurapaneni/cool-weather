@@ -300,12 +300,12 @@ class CurrentWeatherWidget extends StatelessWidget {
   final Location? selectedLocation;
 
   const CurrentWeatherWidget({
-    Key? key,
+    super.key,
     required this.weatherData,
     this.lastUpdated,
     required this.isCurrentLocationSelected,
     this.selectedLocation,
-  }) : super(key: key);
+  });
 
   // Replace the helper to use a warmer color scheme for current weather only
   Widget _buildWeatherIcon(int code, DateTime dateTime, double size,

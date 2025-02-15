@@ -146,11 +146,13 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
       var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied)
+        if (permission == LocationPermission.denied) {
           throw Exception('Location permissions denied');
+        }
       }
-      if (permission == LocationPermission.deniedForever)
+      if (permission == LocationPermission.deniedForever) {
         throw Exception('Location permissions permanently denied');
+      }
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.medium,
       ).timeout(const Duration(seconds: 15));
@@ -194,7 +196,9 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
   void _onSearchChanged() {
     if (_ignoreSearchUpdates) return;
     if (_selectedLocation != null &&
-        _searchController.text.trim() == _selectedLocation!.displayName) return;
+        _searchController.text.trim() == _selectedLocation!.displayName) {
+      return;
+    }
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
       final searchText = _searchController.text.trim();
@@ -344,7 +348,14 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                               : null,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Colors.grey),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Colors.blue),
                           ),
                           fillColor: Colors.white,
                           filled: true,
