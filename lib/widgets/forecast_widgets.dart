@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'dart:math' show min;
 import 'package:weather_icons/weather_icons.dart';
 import '../services/weather_service.dart';
+import '../utils/custom_scroll_behavior.dart';
 
 const Map<int, String> weatherDescriptions = {
   0: 'Clear sky',
@@ -67,61 +68,69 @@ Widget buildHourlyForecast(
         child: Scrollbar(
           thumbVisibility: true,
           controller: controller,
-          child: ListView.builder(
-            controller: controller,
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.only(bottom: 16),
-            itemCount: itemCount,
-            itemBuilder: (context, index) {
-              final int idx = startIndex + index;
-              final DateTime forecastTime = DateTime.parse(times[idx]);
-              final bool isCurrent = index == 0;
-              final int code = codes[idx] as int;
-              final String description = weatherDescriptions[code] ?? 'Unknown';
-              return Container(
-                width: 120,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.blue.shade50, Colors.white],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isCurrent ? Colors.blue : Colors.transparent,
-                    width: 2,
-                  ),
-                ),
-                padding:
-                    const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Text(
-                      isCurrent ? 'Now' : DateFormat('ha').format(forecastTime),
-                      style: const TextStyle(fontSize: 12),
+          child: ScrollConfiguration(
+            behavior: MyCustomScrollBehavior(),
+            child: ListView.separated(
+              controller: controller,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(bottom: 16),
+              itemCount: itemCount,
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final int idx = startIndex + index;
+                final DateTime forecastTime = DateTime.parse(times[idx]);
+                final bool isCurrent = index == 0;
+                final int code = codes[idx] as int;
+                final String description =
+                    weatherDescriptions[code] ?? 'Unknown';
+                return Container(
+                  width: 120,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.blue.shade50, Colors.white],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
                     ),
-                    buildWeatherIcon(
-                        code, forecastTime, 40, false, sunrise, sunset),
-                    Text(
-                      description,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isCurrent ? Colors.blue : Colors.transparent,
+                      width: 2,
                     ),
-                    if (precipitation != null && idx < precipitation.length)
-                      Text('${precipitation[idx].round()}%',
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Text(
+                        isCurrent
+                            ? 'Now'
+                            : DateFormat('ha').format(forecastTime),
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      buildWeatherIcon(
+                          code, forecastTime, 40, false, sunrise, sunset),
+                      Text(
+                        description,
+                        textAlign: TextAlign.center,
+                        style:
+                            const TextStyle(fontSize: 10, color: Colors.grey),
+                      ),
+                      if (precipitation != null && idx < precipitation.length)
+                        Text('${precipitation[idx].round()}%',
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.blue)),
+                      Text('${temps[idx].round()}°',
                           style: const TextStyle(
-                              fontSize: 12, color: Colors.blue)),
-                    Text('${temps[idx].round()}°',
-                        style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.normal,
-                            color: Colors.black87)),
-                  ],
-                ),
-              );
-            },
+                              fontSize: 16,
+                              fontWeight: FontWeight.normal,
+                              color: Colors.black87)),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -147,66 +156,71 @@ Widget buildDailyForecast(
         child: Scrollbar(
           thumbVisibility: true,
           controller: controller,
-          child: ListView.builder(
-            controller: controller,
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.only(bottom: 16),
-            itemCount: times.length,
-            itemBuilder: (context, index) {
-              final DateTime date = DateTime.parse(times[index]);
-              final bool isToday = date.day == DateTime.now().day;
-              final int code = codes[index] as int;
-              final String desc = weatherDescriptions[code] ?? 'Unknown';
-              final String precip =
-                  (percents != null && index < percents.length)
-                      ? '${percents[index].round()}%'
-                      : '0%';
-              return Container(
-                width: 120,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.blue.shade50, Colors.white],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isToday ? Colors.blue : Colors.transparent,
-                    width: 2,
-                  ),
-                ),
-                padding:
-                    const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Text(
-                      isToday ? 'Today' : DateFormat('E').format(date),
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight:
-                              isToday ? FontWeight.bold : FontWeight.normal),
+          child: ScrollConfiguration(
+            behavior: MyCustomScrollBehavior(),
+            child: ListView.separated(
+              controller: controller,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(bottom: 16),
+              itemCount: times.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final DateTime date = DateTime.parse(times[index]);
+                final bool isToday = date.day == DateTime.now().day;
+                final int code = codes[index] as int;
+                final String desc = weatherDescriptions[code] ?? 'Unknown';
+                final String precip =
+                    (percents != null && index < percents.length)
+                        ? '${percents[index].round()}%'
+                        : '0%';
+                return Container(
+                  width: 120,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.blue.shade50, Colors.white],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
                     ),
-                    buildWeatherIcon(code, date, 40, true),
-                    Text(
-                      desc,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isToday ? Colors.blue : Colors.transparent,
+                      width: 2,
                     ),
-                    Text(precip,
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Text(
+                        isToday ? 'Today' : DateFormat('E').format(date),
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight:
+                                isToday ? FontWeight.bold : FontWeight.normal),
+                      ),
+                      buildWeatherIcon(code, date, 40, true),
+                      Text(
+                        desc,
+                        textAlign: TextAlign.center,
                         style:
-                            const TextStyle(fontSize: 12, color: Colors.blue)),
-                    Text(
-                        '${maxTemps[index].round()}° / ${minTemps[index].round()}°',
-                        style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.normal,
-                            color: Colors.black87)),
-                  ],
-                ),
-              );
-            },
+                            const TextStyle(fontSize: 10, color: Colors.grey),
+                      ),
+                      Text(precip,
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.blue)),
+                      Text(
+                          '${maxTemps[index].round()}° / ${minTemps[index].round()}°',
+                          style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.normal,
+                              color: Colors.black87)),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ),
