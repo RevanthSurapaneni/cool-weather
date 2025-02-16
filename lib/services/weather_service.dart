@@ -3,20 +3,27 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class WeatherService {
-  // Add CORS proxy for web
-  static String get _baseUrl {
+  // Fix CORS issues for web
+  static String _getUrl(String baseUrl, Map<String, String> params) {
     if (kIsWeb) {
-      // Use CORS proxy for web
-      return 'https://cors-anywhere.herokuapp.com/https://api.open-meteo.com/v1/forecast';
+      // Use a reliable CORS proxy or your own backend
+      final Uri uri = Uri.parse(baseUrl).replace(queryParameters: params);
+      return 'https://api.allorigins.win/raw?url=${Uri.encodeComponent(uri.toString())}';
     }
-    return 'https://api.open-meteo.com/v1/forecast';
+    return Uri.parse(baseUrl).replace(queryParameters: params).toString();
   }
 
-  static const String baseUrl = 'https://api.open-meteo.com/v1/forecast';
-
   static Future<List<Location>> geocodeLocation(String query) async {
-    final response = await http.get(Uri.parse(
-        'https://geocoding-api.open-meteo.com/v1/search?name=$query&count=10&language=en'));
+    final params = {
+      'name': query,
+      'count': '10',
+      'language': 'en',
+    };
+
+    final url =
+        _getUrl('https://geocoding-api.open-meteo.com/v1/search', params);
+
+    final response = await http.get(Uri.parse(url));
     if (response.statusCode == 200) {
       final results = jsonDecode(response.body)['results'] as List?;
       if (results == null || results.isEmpty) {
@@ -44,11 +51,19 @@ class WeatherService {
   }
 
   static Future<AirQualityData> getAirQuality(double lat, double lon) async {
-    final response = await http.get(Uri.parse(
-        'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=$lat&longitude=$lon&hourly=pm2_5,pm10,carbon_monoxide,sulphur_dioxide,ozone,nitrogen_dioxide&timezone=auto'));
+    final params = {
+      'latitude': lat.toString(),
+      'longitude': lon.toString(),
+      'hourly':
+          'pm2_5,pm10,carbon_monoxide,sulphur_dioxide,ozone,nitrogen_dioxide',
+      'timezone': 'auto',
+    };
 
+    final url = _getUrl(
+        'https://air-quality-api.open-meteo.com/v1/air-quality', params);
+
+    final response = await http.get(Uri.parse(url));
     if (response.statusCode == 200) {
-      print('Air Quality API Response: ${response.body}'); // Log the response
       return AirQualityData.fromJson(jsonDecode(response.body));
     } else {
       throw Exception('Failed to load air quality data');
@@ -57,14 +72,21 @@ class WeatherService {
 
   static Future<WeatherData> getWeather(double lat, double lon,
       {bool useMetric = false}) async {
-    final url = '$_baseUrl?latitude=$lat&longitude=$lon'
-        '&current_weather=true'
-        '&hourly=temperature_2m,weathercode,precipitation_probability,apparent_temperature,wind_speed_10m,wind_direction_10m,uv_index,is_day'
-        '&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max,wind_speed_10m_max'
-        '&timezone=auto'
-        '&temperature_unit=${useMetric ? "celsius" : "fahrenheit"}'
-        '&windspeed_unit=${useMetric ? "kmh" : "mph"}'
-        '&precipitation_unit=${useMetric ? "mm" : "inch"}';
+    final params = {
+      'latitude': lat.toString(),
+      'longitude': lon.toString(),
+      'current_weather': 'true',
+      'hourly':
+          'temperature_2m,weathercode,precipitation_probability,apparent_temperature,wind_speed_10m,wind_direction_10m,uv_index,is_day',
+      'daily':
+          'weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max,wind_speed_10m_max',
+      'timezone': 'auto',
+      'temperature_unit': useMetric ? 'celsius' : 'fahrenheit',
+      'windspeed_unit': useMetric ? 'kmh' : 'mph',
+      'precipitation_unit': useMetric ? 'mm' : 'inch',
+    };
+
+    final url = _getUrl('https://api.open-meteo.com/v1/forecast', params);
 
     final response = await http.get(Uri.parse(url));
     if (response.statusCode == 200) {

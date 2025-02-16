@@ -47,7 +47,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final _prefs = PreferencesService();
-  bool _useMetric = true;
+  bool _useMetric = false; // Change initial value to false
   bool _useDarkMode = false;
 
   @override
