@@ -24,8 +24,8 @@ class PreferencesService {
   }
 
   bool getUseMetric() {
-    return _prefs.getBool(_kUseMetricKey) ??
-        false; // Change default to false for imperial
+    // Default to false (imperial)
+    return _prefs.getBool(_kUseMetricKey) ?? false;
   }
 
   // Theme Preferences

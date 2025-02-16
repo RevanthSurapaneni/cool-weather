@@ -5,6 +5,7 @@ import 'services/weather_service.dart';
 import 'widgets/forecast_widgets.dart';
 import 'pages/settings_page.dart';
 import 'services/preferences_service.dart';
+import 'widgets/skeleton_widgets.dart';
 
 const Map<int, String> weatherDescriptions = {
   0: 'Clear sky',
@@ -47,7 +48,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final _prefs = PreferencesService();
-  bool _useMetric = false; // Change initial value to false
+  bool _useMetric = false; // Explicitly set default to false (imperial)
   bool _useDarkMode = false;
 
   @override
@@ -74,7 +75,8 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _loadPreferences() async {
     setState(() {
-      _useMetric = _prefs.getUseMetric();
+      _useMetric =
+          _prefs.getUseMetric(); // Will now default to false from preferences
       _useDarkMode = _prefs.getUseDarkMode();
     });
   }
@@ -419,6 +421,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () async {
+              final oldMetric = widget.useMetric; // Store the old value
               await Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -426,7 +429,10 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                     useMetric: widget.useMetric,
                     useDarkMode:
                         Theme.of(context).brightness == Brightness.dark,
-                    onUnitChanged: widget.onUnitsChanged,
+                    onUnitChanged: (bool value) {
+                      // First update the preference/state
+                      widget.onUnitsChanged(value);
+                    },
                     onThemeChanged:
                         (context.findAncestorStateOfType<_MyAppState>())
                                 ?._updateTheme ??
@@ -434,8 +440,10 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                   ),
                 ),
               );
-              if (mounted) {
-                _fetchWeather();
+
+              // After settings page is closed, check if units actually changed
+              if (oldMetric != widget.useMetric && mounted) {
+                await _fetchWeather(); // Only fetch if units changed
               }
             },
           ),
@@ -540,16 +548,12 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                   ],
                 ),
               ),
-              if (_isLoading) const LinearProgressIndicator(),
-              if (_errorMessage.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    _errorMessage,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                ),
-              if (_weatherData != null) ...[
+              if (_isLoading) ...[
+                const CurrentWeatherSkeleton(), // Changed from WeatherSkeletonCard
+                const ForecastSkeleton(), // Changed from ForecastSkeletonCard
+                const SizedBox(height: 16),
+                const ForecastSkeleton(), // Changed from ForecastSkeletonCard
+              ] else if (_weatherData != null) ...[
                 CurrentWeatherWidget(
                   weatherData: _weatherData!,
                   lastUpdated: _lastUpdated,
@@ -572,6 +576,14 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                   widget.useMetric,
                 ),
               ],
+              if (_errorMessage.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    _errorMessage,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
             ],
           ),
         ),

@@ -96,15 +96,28 @@ Widget buildHourlyForecast(
                         gradient: LinearGradient(
                           colors: isDark
                               ? [Colors.grey.shade900, Colors.grey.shade800]
-                              : [Colors.blue.shade50, Colors.white],
+                              : [
+                                  Colors.blue.shade50.withOpacity(0.8),
+                                  Colors.white.withOpacity(0.95),
+                                ],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
+                          stops: const [0.0, 0.7],
                         ),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isCurrent ? Colors.blue : Colors.transparent,
                           width: 2,
                         ),
+                        boxShadow: isDark
+                            ? null
+                            : [
+                                BoxShadow(
+                                  color: Colors.blue.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  spreadRadius: 1,
+                                ),
+                              ],
                       ),
                       padding: const EdgeInsets.symmetric(
                           vertical: 12, horizontal: 4),
@@ -200,15 +213,28 @@ Widget buildDailyForecast(
                         gradient: LinearGradient(
                           colors: isDark
                               ? [Colors.grey.shade900, Colors.grey.shade800]
-                              : [Colors.blue.shade50, Colors.white],
+                              : [
+                                  Colors.blue.shade50.withOpacity(0.8),
+                                  Colors.white.withOpacity(0.95),
+                                ],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
+                          stops: const [0.0, 0.7],
                         ),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isToday ? Colors.blue : Colors.transparent,
                           width: 2,
                         ),
+                        boxShadow: isDark
+                            ? null
+                            : [
+                                BoxShadow(
+                                  color: Colors.blue.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  spreadRadius: 1,
+                                ),
+                              ],
                       ),
                       padding: const EdgeInsets.symmetric(
                           vertical: 12, horizontal: 4),

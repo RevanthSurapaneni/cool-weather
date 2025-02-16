@@ -81,9 +81,11 @@ class WeatherService {
       'daily':
           'weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max,wind_speed_10m_max',
       'timezone': 'auto',
-      'temperature_unit': useMetric ? 'celsius' : 'fahrenheit',
-      'windspeed_unit': useMetric ? 'kmh' : 'mph',
-      'precipitation_unit': useMetric ? 'mm' : 'inch',
+      // Fix: When useMetric is true, we want metric units (celsius, kmh, mm)
+      // When useMetric is false, we want imperial units (fahrenheit, mph, inch)
+      'temperature_unit': !useMetric ? 'fahrenheit' : 'celsius',
+      'windspeed_unit': !useMetric ? 'mph' : 'kmh',
+      'precipitation_unit': !useMetric ? 'inch' : 'mm',
     };
 
     final url = _getUrl('https://api.open-meteo.com/v1/forecast', params);
