@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:geolocator/geolocator.dart';
 import 'services/weather_service.dart';
 import 'widgets/forecast_widgets.dart';
+import 'pages/settings_page.dart'; 
 
 const Map<int, String> weatherDescriptions = {
   0: 'Clear sky',
@@ -36,8 +37,21 @@ void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  bool _useMetric = false;
+
+  void _updateUnits(bool value) {
+    setState(() {
+      _useMetric = value;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -78,13 +92,23 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const WeatherHomePage(),
+      home: WeatherHomePage(
+        useMetric: _useMetric,
+        onUnitsChanged: _updateUnits,
+      ),
     );
   }
 }
 
 class WeatherHomePage extends StatefulWidget {
-  const WeatherHomePage({super.key});
+  final bool useMetric;
+  final Function(bool) onUnitsChanged;
+
+  const WeatherHomePage({
+    super.key,
+    required this.useMetric,
+    required this.onUnitsChanged,
+  });
   @override
   State<WeatherHomePage> createState() => _WeatherHomePageState();
 }
@@ -247,6 +271,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
       final weather = await WeatherService.getWeather(
         _selectedLocation!.latitude,
         _selectedLocation!.longitude,
+        useMetric: widget.useMetric, // Pass the metric setting
       );
       AirQualityData? airQuality;
       try {
@@ -303,6 +328,23 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
           IconButton(
               icon: const Icon(Icons.my_location),
               onPressed: _getCurrentLocation),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SettingsPage(
+                    useMetric: widget.useMetric,
+                    onUnitChanged: widget.onUnitsChanged,
+                  ),
+                ),
+              );
+              if (mounted) {
+                _fetchWeather(); // Refresh with new units
+              }
+            },
+          ),
         ],
       ),
       body: SafeArea(
@@ -400,6 +442,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                   lastUpdated: _lastUpdated,
                   isCurrentLocationSelected: _isCurrentLocationSelected,
                   selectedLocation: _selectedLocation,
+                  useMetric: widget.useMetric, // Add this line
                 ),
                 buildHourlyForecast(
                   _weatherData!.hourly,

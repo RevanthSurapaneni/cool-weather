@@ -45,14 +45,18 @@ class WeatherService {
     }
   }
 
-  static Future<WeatherData> getWeather(double lat, double lon) async {
-    final response = await http.get(Uri.parse(
-        '$baseUrl?latitude=$lat&longitude=$lon'
+  static Future<WeatherData> getWeather(double lat, double lon,
+      {bool useMetric = false}) async {
+    final url = '$baseUrl?latitude=$lat&longitude=$lon'
         '&current_weather=true'
         '&hourly=temperature_2m,weathercode,precipitation_probability,apparent_temperature,wind_speed_10m,wind_direction_10m,uv_index,is_day'
         '&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max,wind_speed_10m_max'
-        '&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'
-        '&timezone=auto'));
+        '&timezone=auto'
+        '&temperature_unit=${useMetric ? "celsius" : "fahrenheit"}'
+        '&windspeed_unit=${useMetric ? "kmh" : "mph"}'
+        '&precipitation_unit=${useMetric ? "mm" : "inch"}';
+
+    final response = await http.get(Uri.parse(url));
     if (response.statusCode == 200) {
       return WeatherData.fromJson(jsonDecode(response.body));
     } else {

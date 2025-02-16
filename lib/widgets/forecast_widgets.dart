@@ -307,11 +307,26 @@ Widget buildWeatherIcon(
   }
 }
 
+Widget buildCurrentTemperature(double temp, bool useMetric) {
+  return Text(
+    '${temp.round()}°${useMetric ? "C" : "F"}',
+    style: const TextStyle(fontSize: 48),
+  );
+}
+
+Widget buildWindSpeed(double speed, String direction, bool useMetric) {
+  return Text(
+    '$speed ${useMetric ? "km/h" : "mph"} $direction',
+    style: const TextStyle(fontSize: 16),
+  );
+}
+
 class CurrentWeatherWidget extends StatelessWidget {
   final WeatherData weatherData;
   final DateTime? lastUpdated;
   final bool isCurrentLocationSelected;
   final Location? selectedLocation;
+  final bool useMetric;
 
   const CurrentWeatherWidget({
     super.key,
@@ -319,6 +334,7 @@ class CurrentWeatherWidget extends StatelessWidget {
     this.lastUpdated,
     required this.isCurrentLocationSelected,
     this.selectedLocation,
+    required this.useMetric,
   });
 
   // Replace the helper to use a warmer color scheme for current weather only
@@ -596,7 +612,7 @@ class CurrentWeatherWidget extends StatelessWidget {
                             size: 16, color: Colors.blue),
                         const SizedBox(width: 4),
                         Text(
-                          'Updated: ${DateFormat('h.mm a').format(lastUpdated!)}',
+                          'Updated: ${DateFormat('h:mm a').format(lastUpdated!)}',
                           style: Theme.of(context)
                               .textTheme
                               .bodySmall
@@ -636,7 +652,7 @@ class CurrentWeatherWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${weatherData.currentTemp.toStringAsFixed(1)}°F',
+                      '${weatherData.currentTemp.toStringAsFixed(1)}°${useMetric ? "C" : "F"}',
                       style: Theme.of(context)
                           .textTheme
                           .headlineLarge
@@ -671,7 +687,7 @@ class CurrentWeatherWidget extends StatelessWidget {
                 _buildWeatherDetail(
                     Icons.navigation,
                     'Wind',
-                    '${weatherData.currentWindSpeed.round()} mph ${weatherData.getWindDirection()}',
+                    '${weatherData.currentWindSpeed} ${useMetric ? "km/h" : "mph"} ${weatherData.getWindDirection()}',
                     null,
                     null),
                 _buildWeatherDetail(
