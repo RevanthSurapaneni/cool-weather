@@ -37,7 +37,9 @@ Widget buildHourlyForecast(
     DateTime currentWeatherTime,
     DateTime sunrise,
     DateTime sunset,
-    ScrollController controller) {
+    ScrollController controller,
+    bool useMetric) {
+  // Added useMetric parameter
   final List<String> times = List<String>.from(hourly['time']);
   final List<dynamic> temps = hourly['temperature_2m'];
   final List<dynamic> codes = hourly['weathercode'];
@@ -121,7 +123,7 @@ Widget buildHourlyForecast(
                         Text('${precipitation[idx].round()}%',
                             style: const TextStyle(
                                 fontSize: 12, color: Colors.blue)),
-                      Text('${temps[idx].round()}°',
+                      Text('${temps[idx].round()}°${useMetric ? "C" : "F"}',
                           style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.normal,
@@ -139,7 +141,8 @@ Widget buildHourlyForecast(
 }
 
 Widget buildDailyForecast(
-    Map<String, dynamic> daily, ScrollController controller) {
+    Map<String, dynamic> daily, ScrollController controller, bool useMetric) {
+  // Added useMetric parameter
   final List<dynamic> times = daily['time'];
   final List<dynamic> maxTemps = daily['temperature_2m_max'];
   final List<dynamic> minTemps = daily['temperature_2m_min'];
@@ -211,7 +214,7 @@ Widget buildDailyForecast(
                           style: const TextStyle(
                               fontSize: 12, color: Colors.blue)),
                       Text(
-                          '${maxTemps[index].round()}° / ${minTemps[index].round()}°',
+                          '${maxTemps[index].round()}°${useMetric ? "C" : "F"} / ${minTemps[index].round()}°${useMetric ? "C" : "F"}',
                           style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.normal,

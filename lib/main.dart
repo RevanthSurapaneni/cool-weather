@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:geolocator/geolocator.dart';
 import 'services/weather_service.dart';
 import 'widgets/forecast_widgets.dart';
-import 'pages/settings_page.dart'; 
+import 'pages/settings_page.dart';
 
 const Map<int, String> weatherDescriptions = {
   0: 'Clear sky',
@@ -89,6 +89,19 @@ class _MyAppState extends State<MyApp> {
           bodyMedium: const TextStyle(
             fontFamily: 'Poppins', // updated font family to Poppins
             fontSize: 14,
+          ),
+        ),
+        textSelectionTheme: const TextSelectionThemeData(
+          cursorColor: Color(0xFF2196F3), // Keep cursor color blue
+        ),
+        inputDecorationTheme: const InputDecorationTheme(
+          // This ensures consistent cursor color across all text fields
+          focusColor: Color(0xFF2196F3),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(
+              color: Color(0xFF2196F3),
+              width: 2,
+            ),
           ),
         ),
       ),
@@ -356,72 +369,82 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    // Updated search bar wrapped in Material without outline border
-                    Material(
-                      elevation: 8,
-                      borderRadius: BorderRadius.circular(12),
-                      clipBehavior: Clip.none,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: TextField(
-                          controller: _searchController,
-                          focusNode: _focusNode,
-                          decoration: InputDecoration(
-                            hintText: 'Search for a location',
-                            prefixIcon:
-                                const Icon(Icons.search, color: Colors.blue),
-                            suffixIcon: _searchController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      setState(() {
-                                        _locations = [];
-                                        _errorMessage = '';
-                                      });
-                                    },
-                                  )
-                                : null,
-                            border: InputBorder.none,
-                            fillColor: Colors.white,
-                            filled: true,
-                          ),
+                    // Replace TextField with TextFormField
+                    TextFormField(
+                      controller: _searchController,
+                      focusNode: _focusNode,
+                      style: TextStyle(color: Colors.black87),
+                      cursorWidth: 2.0,
+                      cursorRadius: const Radius.circular(1),
+                      decoration: InputDecoration(
+                        labelText: 'Search Location',
+                        hintText: 'Enter city name',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _locations = [];
+                                    _errorMessage = '';
+                                  });
+                                },
+                              )
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade400),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.blue, width: 2),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
                       ),
                     ),
-                    // Updated search results with proper styling
+                    // Updated search results with Material 3 styling
                     if (_locations.isNotEmpty)
-                      Container(
-                        margin: const EdgeInsets.only(top: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Card(
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            padding: EdgeInsets.zero,
+                            itemCount: _locations.length,
+                            separatorBuilder: (context, index) => Divider(
+                              height: 1,
+                              indent: 16,
+                              endIndent: 16,
+                              color: Theme.of(context)
+                                  .dividerColor
+                                  .withOpacity(0.5),
                             ),
-                          ],
-                        ),
-                        constraints: const BoxConstraints(maxHeight: 300),
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          itemCount: _locations.length,
-                          separatorBuilder: (context, index) =>
-                              const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            return ListTile(
-                              title: Text(_locations[index].displayName),
-                              onTap: () => _selectLocation(_locations[index]),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              trailing:
-                                  const Icon(Icons.arrow_forward_ios, size: 16),
-                            );
-                          },
+                            itemBuilder: (context, index) {
+                              return ListTile(
+                                title: Text(
+                                  _locations[index].displayName,
+                                  style: Theme.of(context).textTheme.bodyLarge,
+                                ),
+                                trailing: Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 16,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                onTap: () => _selectLocation(_locations[index]),
+                              );
+                            },
+                          ),
                         ),
                       ),
                   ],
@@ -450,9 +473,14 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                   _weatherData!.sunrise,
                   _weatherData!.sunset,
                   _hourlyController,
+                  widget.useMetric, // Added useMetric parameter
                 ),
                 const SizedBox(height: 16),
-                buildDailyForecast(_weatherData!.daily, _dailyController),
+                buildDailyForecast(
+                  _weatherData!.daily,
+                  _dailyController,
+                  widget.useMetric, // Added useMetric parameter
+                ),
               ],
             ],
           ),
