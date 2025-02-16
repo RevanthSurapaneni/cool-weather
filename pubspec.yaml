@@ -26,5 +26,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   
-  assets:
-    - assets/
+  # Remove or comment out the assets section since we're not using it yet
+  # assets:
+  #   - assets/

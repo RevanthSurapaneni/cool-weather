@@ -703,10 +703,12 @@ class CurrentWeatherWidget extends StatelessWidget {
                     Text(
                       weatherDescriptions[weatherData.currentWeatherCode] ??
                           'Unknown',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontSize: 20, color: Colors.grey.shade700),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontSize: 20,
+                            color: isDark
+                                ? Colors.grey.shade300
+                                : Colors.grey.shade700,
+                          ),
                     ),
                   ],
                 ),
