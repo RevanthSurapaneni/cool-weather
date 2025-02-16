@@ -314,44 +314,36 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    // Updated search bar with clear button and better styling
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
+                    // Updated search bar wrapped in Material without outline border
+                    Material(
+                      elevation: 8,
+                      borderRadius: BorderRadius.circular(12),
+                      clipBehavior: Clip.none,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: TextField(
+                          controller: _searchController,
+                          focusNode: _focusNode,
+                          decoration: InputDecoration(
+                            hintText: 'Search for a location',
+                            prefixIcon:
+                                const Icon(Icons.search, color: Colors.blue),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() {
+                                        _locations = [];
+                                        _errorMessage = '';
+                                      });
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            fillColor: Colors.white,
+                            filled: true,
                           ),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        focusNode: _focusNode,
-                        decoration: InputDecoration(
-                          hintText: 'Search for a location',
-                          prefixIcon:
-                              const Icon(Icons.search, color: Colors.blue),
-                          suffixIcon: _searchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() {
-                                      _locations = [];
-                                      _errorMessage = '';
-                                    });
-                                  },
-                                )
-                              : null,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          fillColor: Colors.white,
-                          filled: true,
                         ),
                       ),
                     ),
