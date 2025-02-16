@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:geolocator/geolocator.dart';
 import 'services/weather_service.dart';
 import 'widgets/forecast_widgets.dart';
 import 'pages/settings_page.dart';
+import 'services/preferences_service.dart';
 
 const Map<int, String> weatherDescriptions = {
   0: 'Clear sky',
@@ -33,7 +33,9 @@ const Map<int, String> weatherDescriptions = {
   99: 'Thunderstorm with heavy hail',
 };
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await PreferencesService.init();
   runApp(const MyApp());
 }
 
@@ -44,12 +46,73 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  bool _useMetric = false;
+  final _prefs = PreferencesService();
+  bool _useMetric = true;
+  bool _useDarkMode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+    _setupSystemTheme();
+  }
+
+  void _setupSystemTheme() {
+    final window = WidgetsBinding.instance.window;
+    _useDarkMode = _prefs.getUseDarkMode(); // Use saved preference first
+
+    // Update if system theme changes
+    window.onPlatformBrightnessChanged = () {
+      if (mounted) {
+        setState(() {
+          _useDarkMode = window.platformBrightness == Brightness.dark;
+          _prefs.saveUseDarkMode(_useDarkMode);
+        });
+      }
+    };
+  }
+
+  Future<void> _loadPreferences() async {
+    setState(() {
+      _useMetric = _prefs.getUseMetric();
+      _useDarkMode = _prefs.getUseDarkMode();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Get system theme preference
+    final window = WidgetsBinding.instance.window;
+    _useDarkMode = window.platformBrightness == Brightness.dark;
+
+    // Listen for system theme changes
+    window.onPlatformBrightnessChanged = () {
+      setState(() {
+        _useDarkMode = window.platformBrightness == Brightness.dark;
+      });
+    };
+  }
+
+  @override
+  void dispose() {
+    // Remove listener when disposing
+    WidgetsBinding.instance.window.onPlatformBrightnessChanged = null;
+    super.dispose();
+  }
 
   void _updateUnits(bool value) {
     setState(() {
       _useMetric = value;
     });
+    _prefs.saveUseMetric(value);
+  }
+
+  void _updateTheme(bool value) {
+    setState(() {
+      _useDarkMode = value;
+    });
+    _prefs.saveUseDarkMode(value);
   }
 
   @override
@@ -59,11 +122,10 @@ class _MyAppState extends State<MyApp> {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.blue,
-          brightness: Brightness.light,
+          brightness: _useDarkMode ? Brightness.dark : Brightness.light,
         ),
         useMaterial3: true,
-        fontFamily: 'Poppins', // updated font family to Poppins
-        // Reverted scaffoldBackgroundColor and appBarTheme to original settings
+        fontFamily: 'Poppins',
         appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
         cardTheme: CardTheme(
           elevation: 2,
@@ -73,29 +135,28 @@ class _MyAppState extends State<MyApp> {
         ),
         textTheme: TextTheme(
           headlineSmall: const TextStyle(
-            fontFamily: 'Poppins', // updated font family to Poppins
+            fontFamily: 'Poppins',
             fontWeight: FontWeight.bold,
             letterSpacing: -0.5,
           ),
           titleMedium: const TextStyle(
-            fontFamily: 'Poppins', // updated font family to Poppins
+            fontFamily: 'Poppins',
             fontSize: 20,
             color: Colors.blue,
           ),
           bodyLarge: const TextStyle(
-            fontFamily: 'Poppins', // updated font family to Poppins
+            fontFamily: 'Poppins',
             fontSize: 16,
           ),
           bodyMedium: const TextStyle(
-            fontFamily: 'Poppins', // updated font family to Poppins
+            fontFamily: 'Poppins',
             fontSize: 14,
           ),
         ),
         textSelectionTheme: const TextSelectionThemeData(
-          cursorColor: Color(0xFF2196F3), // Keep cursor color blue
+          cursorColor: Color(0xFF2196F3),
         ),
         inputDecorationTheme: const InputDecorationTheme(
-          // This ensures consistent cursor color across all text fields
           focusColor: Color(0xFF2196F3),
           focusedBorder: OutlineInputBorder(
             borderSide: BorderSide(
@@ -142,10 +203,12 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
   final ScrollController _hourlyController = ScrollController();
   final ScrollController _dailyController = ScrollController();
   final ScrollController _mainScrollController = ScrollController();
+  final _prefs = PreferencesService();
 
   @override
   void initState() {
     super.initState();
+    _loadLastLocation();
     _searchController.addListener(_onSearchChanged);
     _focusNode.addListener(() {
       if (!_focusNode.hasFocus) {
@@ -159,6 +222,14 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
         });
       }
     });
+  }
+
+  Future<void> _loadLastLocation() async {
+    final lastLocation = _prefs.getLastLocation();
+    if (lastLocation != null) {
+      final location = Location.fromJson(lastLocation);
+      await _selectLocation(location);
+    }
   }
 
   @override
@@ -220,12 +291,15 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
       _searchController.text = location.displayName;
       _locations = [];
       _errorMessage = '';
-      _isLoading = true; // maintain loading while weather is fetched
+      _isLoading = true;
     });
     await _fetchWeather();
+    if (!isCurrent) {
+      await _prefs.addRecentSearch(location.toJson());
+    }
     _ignoreSearchUpdates = false;
     setState(() {
-      _isLoading = false; // now turn off loading after API call completes
+      _isLoading = false;
     });
     FocusScope.of(context).unfocus();
   }
@@ -284,7 +358,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
       final weather = await WeatherService.getWeather(
         _selectedLocation!.latitude,
         _selectedLocation!.longitude,
-        useMetric: widget.useMetric, // Pass the metric setting
+        useMetric: widget.useMetric,
       );
       AirQualityData? airQuality;
       try {
@@ -292,10 +366,9 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
           _selectedLocation!.latitude,
           _selectedLocation!.longitude,
         );
-        print('Air Quality Data: $airQuality'); // Log the air quality data
+        print('Air Quality Data: $airQuality');
         weather.airQualityData = airQuality;
       } catch (e) {
-        // Log the error but don't stop the app from working
         print('Failed to fetch air quality data: $e');
       }
       setState(() {
@@ -325,6 +398,8 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Weather App'),
@@ -349,12 +424,18 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                 MaterialPageRoute(
                   builder: (context) => SettingsPage(
                     useMetric: widget.useMetric,
+                    useDarkMode:
+                        Theme.of(context).brightness == Brightness.dark,
                     onUnitChanged: widget.onUnitsChanged,
+                    onThemeChanged:
+                        (context.findAncestorStateOfType<_MyAppState>())
+                                ?._updateTheme ??
+                            (_) {},
                   ),
                 ),
               );
               if (mounted) {
-                _fetchWeather(); // Refresh with new units
+                _fetchWeather();
               }
             },
           ),
@@ -369,11 +450,12 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    // Replace TextField with TextFormField
                     TextFormField(
                       controller: _searchController,
                       focusNode: _focusNode,
-                      style: TextStyle(color: Colors.black87),
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
                       cursorWidth: 2.0,
                       cursorRadius: const Radius.circular(1),
                       decoration: InputDecoration(
@@ -397,17 +479,25 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey.shade400),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? Colors.grey.shade600
+                                : Colors.grey.shade400,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.blue, width: 2),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.primary,
+                            width: 2,
+                          ),
                         ),
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: isDark
+                            ? Theme.of(context).colorScheme.surface
+                            : Colors.white,
                       ),
                     ),
-                    // Updated search results with Material 3 styling
                     if (_locations.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
@@ -465,7 +555,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                   lastUpdated: _lastUpdated,
                   isCurrentLocationSelected: _isCurrentLocationSelected,
                   selectedLocation: _selectedLocation,
-                  useMetric: widget.useMetric, // Add this line
+                  useMetric: widget.useMetric,
                 ),
                 buildHourlyForecast(
                   _weatherData!.hourly,
@@ -473,13 +563,13 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                   _weatherData!.sunrise,
                   _weatherData!.sunset,
                   _hourlyController,
-                  widget.useMetric, // Added useMetric parameter
+                  widget.useMetric,
                 ),
                 const SizedBox(height: 16),
                 buildDailyForecast(
                   _weatherData!.daily,
                   _dailyController,
-                  widget.useMetric, // Added useMetric parameter
+                  widget.useMetric,
                 ),
               ],
             ],

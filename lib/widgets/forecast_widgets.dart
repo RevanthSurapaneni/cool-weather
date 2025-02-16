@@ -40,194 +40,220 @@ Widget buildHourlyForecast(
     ScrollController controller,
     bool useMetric) {
   // Added useMetric parameter
-  final List<String> times = List<String>.from(hourly['time']);
-  final List<dynamic> temps = hourly['temperature_2m'];
-  final List<dynamic> codes = hourly['weathercode'];
-  final List<dynamic>? precipitation = hourly['precipitation_probability'];
-  final DateTime curHour = DateTime(
-      currentWeatherTime.year,
-      currentWeatherTime.month,
-      currentWeatherTime.day,
-      currentWeatherTime.hour);
-  final int currentIndex = times.indexWhere((t) {
-    final dt = DateTime.parse(t);
-    return dt.year == curHour.year &&
-        dt.month == curHour.month &&
-        dt.day == curHour.day &&
-        dt.hour == curHour.hour;
-  });
-  final int startIndex = currentIndex == -1 ? 0 : currentIndex;
-  final int itemCount = min(24, times.length - startIndex);
+  return Builder(
+    builder: (context) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final List<String> times = List<String>.from(hourly['time']);
+      final List<dynamic> temps = hourly['temperature_2m'];
+      final List<dynamic> codes = hourly['weathercode'];
+      final List<dynamic>? precipitation = hourly['precipitation_probability'];
+      final DateTime curHour = DateTime(
+          currentWeatherTime.year,
+          currentWeatherTime.month,
+          currentWeatherTime.day,
+          currentWeatherTime.hour);
+      final int currentIndex = times.indexWhere((t) {
+        final dt = DateTime.parse(t);
+        return dt.year == curHour.year &&
+            dt.month == curHour.month &&
+            dt.day == curHour.day &&
+            dt.hour == curHour.hour;
+      });
+      final int startIndex = currentIndex == -1 ? 0 : currentIndex;
+      final int itemCount = min(24, times.length - startIndex);
 
-  return Card(
-    elevation: 4,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: SizedBox(
-        height: 200,
-        child: Scrollbar(
-          thumbVisibility: true,
-          controller: controller,
-          child: ScrollConfiguration(
-            behavior: MyCustomScrollBehavior(),
-            child: ListView.separated(
+      return Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: SizedBox(
+            height: 200,
+            child: Scrollbar(
+              thumbVisibility: true,
               controller: controller,
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(bottom: 16),
-              itemCount: itemCount,
-              separatorBuilder: (context, index) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final int idx = startIndex + index;
-                final DateTime forecastTime = DateTime.parse(times[idx]);
-                final bool isCurrent = index == 0;
-                final int code = codes[idx] as int;
-                final String description =
-                    weatherDescriptions[code] ?? 'Unknown';
-                return Container(
-                  width: 120,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.blue.shade50, Colors.white],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isCurrent ? Colors.blue : Colors.transparent,
-                      width: 2,
-                    ),
-                  ),
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Text(
-                        isCurrent
-                            ? 'Now'
-                            : DateFormat('ha').format(forecastTime),
-                        style: const TextStyle(fontSize: 12),
+              child: ScrollConfiguration(
+                behavior: MyCustomScrollBehavior(),
+                child: ListView.separated(
+                  controller: controller,
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.only(bottom: 16),
+                  itemCount: itemCount,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final int idx = startIndex + index;
+                    final DateTime forecastTime = DateTime.parse(times[idx]);
+                    final bool isCurrent = index == 0;
+                    final int code = codes[idx] as int;
+                    final String description =
+                        weatherDescriptions[code] ?? 'Unknown';
+                    return Container(
+                      width: 120,
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: isDark
+                              ? [Colors.grey.shade900, Colors.grey.shade800]
+                              : [Colors.blue.shade50, Colors.white],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isCurrent ? Colors.blue : Colors.transparent,
+                          width: 2,
+                        ),
                       ),
-                      buildWeatherIcon(
-                          code, forecastTime, 40, false, sunrise, sunset),
-                      Text(
-                        description,
-                        textAlign: TextAlign.center,
-                        style:
-                            const TextStyle(fontSize: 10, color: Colors.grey),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 4),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Text(
+                            isCurrent
+                                ? 'Now'
+                                : DateFormat('ha').format(forecastTime),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          buildWeatherIcon(
+                              code, forecastTime, 40, false, sunrise, sunset),
+                          Text(
+                            description,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontSize: 10,
+                                color: isDark
+                                    ? Colors.grey.shade300
+                                    : Colors.grey),
+                          ),
+                          if (precipitation != null &&
+                              idx < precipitation.length)
+                            Text('${precipitation[idx].round()}%',
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.blue)),
+                          Text('${temps[idx].round()}°${useMetric ? "C" : "F"}',
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.normal,
+                                  color:
+                                      isDark ? Colors.white : Colors.black87)),
+                        ],
                       ),
-                      if (precipitation != null && idx < precipitation.length)
-                        Text('${precipitation[idx].round()}%',
-                            style: const TextStyle(
-                                fontSize: 12, color: Colors.blue)),
-                      Text('${temps[idx].round()}°${useMetric ? "C" : "F"}',
-                          style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.normal,
-                              color: Colors.black87)),
-                    ],
-                  ),
-                );
-              },
+                    );
+                  },
+                ),
+              ),
             ),
           ),
         ),
-      ),
-    ),
+      );
+    },
   );
 }
 
 Widget buildDailyForecast(
     Map<String, dynamic> daily, ScrollController controller, bool useMetric) {
   // Added useMetric parameter
-  final List<dynamic> times = daily['time'];
-  final List<dynamic> maxTemps = daily['temperature_2m_max'];
-  final List<dynamic> minTemps = daily['temperature_2m_min'];
-  final List<dynamic> codes = daily['weathercode'];
-  final List<dynamic>? percents = daily['precipitation_probability_max'];
-  return Card(
-    elevation: 4,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: SizedBox(
-        height: 220,
-        child: Scrollbar(
-          thumbVisibility: true,
-          controller: controller,
-          child: ScrollConfiguration(
-            behavior: MyCustomScrollBehavior(),
-            child: ListView.separated(
+  return Builder(
+    builder: (context) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final List<dynamic> times = daily['time'];
+      final List<dynamic> maxTemps = daily['temperature_2m_max'];
+      final List<dynamic> minTemps = daily['temperature_2m_min'];
+      final List<dynamic> codes = daily['weathercode'];
+      final List<dynamic>? percents = daily['precipitation_probability_max'];
+      return Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: SizedBox(
+            height: 220,
+            child: Scrollbar(
+              thumbVisibility: true,
               controller: controller,
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(bottom: 16),
-              itemCount: times.length,
-              separatorBuilder: (context, index) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final DateTime date = DateTime.parse(times[index]);
-                final bool isToday = date.day == DateTime.now().day;
-                final int code = codes[index] as int;
-                final String desc = weatherDescriptions[code] ?? 'Unknown';
-                final String precip =
-                    (percents != null && index < percents.length)
-                        ? '${percents[index].round()}%'
-                        : '0%';
-                return Container(
-                  width: 120,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.blue.shade50, Colors.white],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isToday ? Colors.blue : Colors.transparent,
-                      width: 2,
-                    ),
-                  ),
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Text(
-                        isToday ? 'Today' : DateFormat('E').format(date),
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight:
-                                isToday ? FontWeight.bold : FontWeight.normal),
+              child: ScrollConfiguration(
+                behavior: MyCustomScrollBehavior(),
+                child: ListView.separated(
+                  controller: controller,
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.only(bottom: 16),
+                  itemCount: times.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final DateTime date = DateTime.parse(times[index]);
+                    final bool isToday = date.day == DateTime.now().day;
+                    final int code = codes[index] as int;
+                    final String desc = weatherDescriptions[code] ?? 'Unknown';
+                    final String precip =
+                        (percents != null && index < percents.length)
+                            ? '${percents[index].round()}%'
+                            : '0%';
+                    return Container(
+                      width: 120,
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: isDark
+                              ? [Colors.grey.shade900, Colors.grey.shade800]
+                              : [Colors.blue.shade50, Colors.white],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isToday ? Colors.blue : Colors.transparent,
+                          width: 2,
+                        ),
                       ),
-                      buildWeatherIcon(code, date, 40, true),
-                      Text(
-                        desc,
-                        textAlign: TextAlign.center,
-                        style:
-                            const TextStyle(fontSize: 10, color: Colors.grey),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 4),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Text(
+                            isToday ? 'Today' : DateFormat('E').format(date),
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: isToday
+                                    ? FontWeight.bold
+                                    : FontWeight.normal),
+                          ),
+                          buildWeatherIcon(code, date, 40, true),
+                          Text(
+                            desc,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontSize: 10,
+                                color: isDark
+                                    ? Colors.grey.shade300
+                                    : Colors.grey),
+                          ),
+                          Text(precip,
+                              style: const TextStyle(
+                                  fontSize: 12, color: Colors.blue)),
+                          Text(
+                              '${maxTemps[index].round()}°${useMetric ? "C" : "F"} / ${minTemps[index].round()}°${useMetric ? "C" : "F"}',
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.normal,
+                                  color:
+                                      isDark ? Colors.white : Colors.black87)),
+                        ],
                       ),
-                      Text(precip,
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.blue)),
-                      Text(
-                          '${maxTemps[index].round()}°${useMetric ? "C" : "F"} / ${minTemps[index].round()}°${useMetric ? "C" : "F"}',
-                          style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.normal,
-                              color: Colors.black87)),
-                    ],
-                  ),
-                );
-              },
+                    );
+                  },
+                ),
+              ),
             ),
           ),
         ),
-      ),
-    ),
+      );
+    },
   );
 }
 
@@ -525,6 +551,7 @@ class CurrentWeatherWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSmall = MediaQuery.of(context).size.width < 600;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     String rainChance = '0%';
     String feelsLikeTemp = 'N/A';
     String airQualityDescription = 'Air quality data unavailable';
@@ -568,7 +595,7 @@ class CurrentWeatherWidget extends StatelessWidget {
     }
 
     return Card(
-      elevation: 12,
+      elevation: isDark ? 4 : 12,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
       ),
@@ -577,10 +604,15 @@ class CurrentWeatherWidget extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(
-            colors: [
-              const Color.fromARGB(255, 167, 215, 255),
-              const Color.fromARGB(255, 194, 216, 247)
-            ],
+            colors: isDark
+                ? [
+                    Colors.grey.shade900,
+                    Colors.grey.shade800,
+                  ]
+                : [
+                    const Color.fromARGB(255, 167, 215, 255),
+                    const Color.fromARGB(255, 194, 216, 247)
+                  ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -598,7 +630,7 @@ class CurrentWeatherWidget extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: isDark ? Colors.grey.shade800 : Colors.white,
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: [
                         BoxShadow(
@@ -611,15 +643,19 @@ class CurrentWeatherWidget extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.access_time,
-                            size: 16, color: Colors.blue),
+                        Icon(Icons.access_time,
+                            size: 16,
+                            color: isDark ? Colors.blue.shade300 : Colors.blue),
                         const SizedBox(width: 4),
                         Text(
                           'Updated: ${DateFormat('h:mm a').format(lastUpdated!)}',
                           style: Theme.of(context)
                               .textTheme
                               .bodySmall
-                              ?.copyWith(color: Colors.blue),
+                              ?.copyWith(
+                                color:
+                                    isDark ? Colors.blue.shade300 : Colors.blue,
+                              ),
                         ),
                       ],
                     ),

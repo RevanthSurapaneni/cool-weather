@@ -38,6 +38,18 @@
       overscroll-behavior-x: none;
     }
   </style>
+
+  <!-- Add geolocation API support -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('flutter_service_worker.js');
+      });
+    }
+  </script>
+  
+  <!-- Enable location services -->
+  <script src="https://unpkg.com/@flutter/geolocation@1.0.0/assets/js/geolocation.js"></script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

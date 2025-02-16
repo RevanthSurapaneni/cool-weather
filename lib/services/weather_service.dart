@@ -1,7 +1,17 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class WeatherService {
+  // Add CORS proxy for web
+  static String get _baseUrl {
+    if (kIsWeb) {
+      // Use CORS proxy for web
+      return 'https://cors-anywhere.herokuapp.com/https://api.open-meteo.com/v1/forecast';
+    }
+    return 'https://api.open-meteo.com/v1/forecast';
+  }
+
   static const String baseUrl = 'https://api.open-meteo.com/v1/forecast';
 
   static Future<List<Location>> geocodeLocation(String query) async {
@@ -47,7 +57,7 @@ class WeatherService {
 
   static Future<WeatherData> getWeather(double lat, double lon,
       {bool useMetric = false}) async {
-    final url = '$baseUrl?latitude=$lat&longitude=$lon'
+    final url = '$_baseUrl?latitude=$lat&longitude=$lon'
         '&current_weather=true'
         '&hourly=temperature_2m,weathercode,precipitation_probability,apparent_temperature,wind_speed_10m,wind_direction_10m,uv_index,is_day'
         '&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max,wind_speed_10m_max'
@@ -83,17 +93,28 @@ class Location {
   factory Location.fromJson(Map<String, dynamic> json) {
     return Location(
       name: json['name'] ?? '',
-      latitude: json['latitude'] ?? 0.0,
-      longitude: json['longitude'] ?? 0.0,
+      latitude: (json['latitude'] as num).toDouble(),
+      longitude: (json['longitude'] as num).toDouble(),
       country: json['country'] ?? '',
       state: json['admin1'],
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'latitude': latitude,
+      'longitude': longitude,
+      'country': country,
+      'admin1': state,
+    };
+  }
+
   String get displayName {
-    return (state != null && state!.isNotEmpty)
-        ? '$name, $state, $country'
-        : '$name, $country';
+    if (state != null && state!.isNotEmpty) {
+      return '$name, $state, $country';
+    }
+    return country.isNotEmpty ? '$name, $country' : name;
   }
 }
 
