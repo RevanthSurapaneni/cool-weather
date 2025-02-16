@@ -93,29 +93,27 @@ Widget buildHourlyForecast(
                       width: 120,
                       margin: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: isDark
-                              ? [Colors.grey.shade900, Colors.grey.shade800]
-                              : [
-                                  Colors.blue.shade50.withOpacity(0.8),
-                                  Colors.white.withOpacity(0.95),
-                                ],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          stops: const [0.0, 0.7],
+                        // Replace gradient with solid color and opacity
+                        color: isDark
+                            ? Colors.grey.shade900
+                            : Colors.white.withOpacity(0.9),
+                        // Add subtle border for light mode visibility
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.transparent
+                              : Colors.blue.shade100,
+                          width: 1,
                         ),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isCurrent ? Colors.blue : Colors.transparent,
-                          width: 2,
-                        ),
+                        // Modify shadow for better visibility
                         boxShadow: isDark
                             ? null
                             : [
                                 BoxShadow(
-                                  color: Colors.blue.withOpacity(0.1),
-                                  blurRadius: 4,
-                                  spreadRadius: 1,
+                                  color: Colors.blue.shade100,
+                                  blurRadius: 8,
+                                  spreadRadius: 0,
+                                  offset: const Offset(0, 2),
                                 ),
                               ],
                       ),
@@ -210,29 +208,27 @@ Widget buildDailyForecast(
                       width: 120,
                       margin: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: isDark
-                              ? [Colors.grey.shade900, Colors.grey.shade800]
-                              : [
-                                  Colors.blue.shade50.withOpacity(0.8),
-                                  Colors.white.withOpacity(0.95),
-                                ],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          stops: const [0.0, 0.7],
+                        // Replace gradient with solid color and opacity
+                        color: isDark
+                            ? Colors.grey.shade900
+                            : Colors.white.withOpacity(0.9),
+                        // Add subtle border for light mode visibility
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.transparent
+                              : Colors.blue.shade100,
+                          width: 1,
                         ),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isToday ? Colors.blue : Colors.transparent,
-                          width: 2,
-                        ),
+                        // Modify shadow for better visibility
                         boxShadow: isDark
                             ? null
                             : [
                                 BoxShadow(
-                                  color: Colors.blue.withOpacity(0.1),
-                                  blurRadius: 4,
-                                  spreadRadius: 1,
+                                  color: Colors.blue.shade100,
+                                  blurRadius: 8,
+                                  spreadRadius: 0,
+                                  offset: const Offset(0, 2),
                                 ),
                               ],
                       ),
