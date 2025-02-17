@@ -217,24 +217,29 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
     });
 
     try {
-      // For Firefox, we need to explicitly check permission first
       if (kIsWeb) {
+        // For Firefox, show a message to the user first
+        setState(() {
+          _errorMessage =
+              'Please allow location access when prompted by your browser...';
+        });
+
+        // Add a small delay to ensure the message is shown
+        await Future.delayed(const Duration(milliseconds: 100));
+
         final hasPermission = await PlatformService.checkLocationPermission();
         if (!hasPermission) {
           setState(() {
             _errorMessage =
-                'Location permission denied. Please allow location access in your browser and try again.';
+                'Location access was denied. Please allow location access in your browser settings and try again.';
             _isLoading = false;
           });
           return;
         }
-        // Add a small delay after permission is granted (Firefox specific)
-        await Future.delayed(const Duration(milliseconds: 500));
       }
 
       final position = await PlatformService.getCurrentPosition();
 
-      // Only proceed if we're still mounted (user hasn't navigated away)
       if (!mounted) return;
 
       final location = Location(
@@ -252,13 +257,14 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
 
       setState(() {
         _errorMessage = kIsWeb
-            ? 'Could not get location. Please ensure you have: \n'
-                '1. Allowed location access in your browser\n'
-                '2. Have location services enabled on your device'
+            ? 'Location access failed. Please:\n'
+                '1. Click the location icon in your browser\'s address bar\n'
+                '2. Allow location access\n'
+                '3. Refresh the page and try again'
             : 'Could not get location. Please check your location settings.';
         _isLoading = false;
       });
-      print('Location error details: $e'); // For debugging
+      print('Location error: $e');
     }
   }
 

@@ -6,24 +6,28 @@ class PlatformService {
   static Future<bool> checkLocationPermission() async {
     if (kIsWeb) {
       try {
-        // Always request permission explicitly on web
-        LocationPermission permission = await Geolocator.requestPermission();
+        // First check if the service is enabled
+        final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) {
+          print('Location services are disabled');
+          return false;
+        }
 
-        // For Firefox, we might need an additional check
+        // For Firefox, check current permission first
+        LocationPermission permission = await Geolocator.checkPermission();
+
+        // If we don't have permission yet, request it
         if (permission == LocationPermission.denied ||
             permission == LocationPermission.unableToDetermine) {
-          // Wait a moment before second attempt
-          await Future.delayed(const Duration(milliseconds: 300));
-          final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-          if (!serviceEnabled) {
-            print('Location services are disabled');
-            return false;
-          }
+          // Firefox needs a user interaction before requesting permission
+          await Future.delayed(const Duration(milliseconds: 100));
           permission = await Geolocator.requestPermission();
         }
 
-        return permission == LocationPermission.always ||
+        final result = permission == LocationPermission.always ||
             permission == LocationPermission.whileInUse;
+        print('Location permission check result: $permission');
+        return result;
       } catch (e) {
         print('Location permission check failed: $e');
         return false;
@@ -48,36 +52,16 @@ class PlatformService {
   static Future<Position> getCurrentPosition() async {
     if (kIsWeb) {
       try {
-        // First check if we have permission
-        final hasPermission = await checkLocationPermission();
-        if (!hasPermission) {
-          throw Exception(
-              'Please allow location access in your browser settings and try again.');
-        }
-
-        // Try to get position with multiple attempts
-        for (int i = 0; i < 2; i++) {
-          try {
-            return await Geolocator.getCurrentPosition(
-              desiredAccuracy: LocationAccuracy.medium,
-            ).timeout(
-              Duration(seconds: i == 0 ? 10 : 20),
-              onTimeout: () =>
-                  throw TimeoutException('Location request timed out'),
-            );
-          } catch (e) {
-            if (i == 1) rethrow; // If second attempt fails, throw error
-            await Future.delayed(
-                const Duration(seconds: 1)); // Wait before retry
-          }
-        }
-        throw Exception('Failed to get location after multiple attempts');
+        // For Firefox, we need to be more patient
+        return await Geolocator.getCurrentPosition(
+          desiredAccuracy:
+              LocationAccuracy.low, // Lower accuracy for faster response
+          timeLimit: const Duration(seconds: 10), // Add explicit time limit
+        );
       } catch (e) {
-        if (e is TimeoutException) {
-          throw Exception(
-              'Location request timed out. Please try again or check your browser settings.');
-        }
-        throw Exception('Could not get location: ${e.toString()}');
+        print('Location error: $e');
+        throw Exception(
+            'Could not get location. Please ensure location access is enabled in your browser settings.');
       }
     }
     return await Geolocator.getCurrentPosition(
