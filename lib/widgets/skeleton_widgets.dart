@@ -125,7 +125,19 @@ class CurrentWeatherSkeleton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          color: isDark ? Colors.grey.shade900 : Colors.blue.shade50,
+          gradient: LinearGradient(
+            colors: isDark
+                ? [
+                    Colors.grey.shade900,
+                    Colors.grey.shade800,
+                  ]
+                : [
+                    Colors.grey.shade200,
+                    Colors.grey.shade100,
+                  ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
         ),
         child: Column(
           children: [
@@ -166,14 +178,16 @@ class CurrentWeatherSkeleton extends StatelessWidget {
               runSpacing: 20,
               alignment: WrapAlignment.center,
               children: List.generate(
-                8,
+                7, // Changed from 8 to 7 boxes
                 (_) => Container(
                   width: 120,
                   height: 110,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.grey.shade800 : Colors.white,
+                    // Replace gradient with solid color
+                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
                     borderRadius: BorderRadius.circular(12),
+                    // Remove the blue border
                   ),
                   child: const Column(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -265,12 +279,33 @@ class AirQualitySkeletonWidget extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
-                    SkeletonBox(width: 160, height: 32),
-                    SizedBox(height: 8),
-                    SkeletonBox(width: 200, height: 20),
+                    SkeletonBox(width: 120, height: 32), // AQI category
+                    SizedBox(height: 4),
+                    SkeletonBox(width: 80, height: 24), // AQI value
                   ],
                 ),
                 const SkeletonBox(width: 48, height: 48, isCircle: true),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const SkeletonBox(width: 240, height: 20), // Description
+            const SizedBox(height: 8),
+            const SkeletonBox(width: 200, height: 16), // Main advice
+            const SizedBox(height: 16),
+            const SkeletonBox(
+                width: 120, height: 20), // Sensitive Groups header
+            const SizedBox(height: 8),
+            Row(
+              children: const [
+                SizedBox(width: 16),
+                SkeletonBox(width: 160, height: 16),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: const [
+                SizedBox(width: 16),
+                SkeletonBox(width: 140, height: 16),
               ],
             ),
             const SizedBox(height: 16),
