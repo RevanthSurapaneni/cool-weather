@@ -215,8 +215,28 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
       _isLoading = true;
       _errorMessage = '';
     });
+
     try {
+      // For Firefox, we need to explicitly check permission first
+      if (kIsWeb) {
+        final hasPermission = await PlatformService.checkLocationPermission();
+        if (!hasPermission) {
+          setState(() {
+            _errorMessage =
+                'Location permission denied. Please allow location access in your browser and try again.';
+            _isLoading = false;
+          });
+          return;
+        }
+        // Add a small delay after permission is granted (Firefox specific)
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+
       final position = await PlatformService.getCurrentPosition();
+
+      // Only proceed if we're still mounted (user hasn't navigated away)
+      if (!mounted) return;
+
       final location = Location(
         name:
             '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}',
@@ -224,17 +244,21 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
         longitude: position.longitude,
         country: '',
         state: '',
-        //admin1: '', // Add this if your Location model requires it
       );
+
       await _selectLocation(location, isCurrent: true);
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         _errorMessage = kIsWeb
-            ? 'Please ensure location access is enabled in your browser settings and try again.'
+            ? 'Could not get location. Please ensure you have: \n'
+                '1. Allowed location access in your browser\n'
+                '2. Have location services enabled on your device'
             : 'Could not get location. Please check your location settings.';
         _isLoading = false;
       });
-      print('Location error: $e'); // Add logging for debugging
+      print('Location error details: $e'); // For debugging
     }
   }
 

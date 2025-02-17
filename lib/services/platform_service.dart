@@ -6,34 +6,24 @@ class PlatformService {
   static Future<bool> checkLocationPermission() async {
     if (kIsWeb) {
       try {
-        // First check if location services are enabled
-        final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-        if (!serviceEnabled) {
-          print('Location services are disabled');
-          return false;
-        }
+        // Always request permission explicitly on web
+        LocationPermission permission = await Geolocator.requestPermission();
 
-        // For web, especially Firefox, we need multiple attempts
-        LocationPermission permission = await Geolocator.checkPermission();
-
-        // If denied or not determined, request explicitly
+        // For Firefox, we might need an additional check
         if (permission == LocationPermission.denied ||
             permission == LocationPermission.unableToDetermine) {
-          // Small delay before first request
-          await Future.delayed(const Duration(milliseconds: 200));
-          permission = await Geolocator.requestPermission();
-
-          // If still denied, try one more time after a longer delay
-          if (permission == LocationPermission.denied) {
-            await Future.delayed(const Duration(seconds: 1));
-            permission = await Geolocator.requestPermission();
+          // Wait a moment before second attempt
+          await Future.delayed(const Duration(milliseconds: 300));
+          final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+          if (!serviceEnabled) {
+            print('Location services are disabled');
+            return false;
           }
+          permission = await Geolocator.requestPermission();
         }
 
-        final result = permission == LocationPermission.always ||
+        return permission == LocationPermission.always ||
             permission == LocationPermission.whileInUse;
-        print('Location permission result: $result');
-        return result;
       } catch (e) {
         print('Location permission check failed: $e');
         return false;
