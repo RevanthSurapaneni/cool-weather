@@ -22,29 +22,13 @@ class PlatformService {
     }
 
     try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        print('Location services are disabled');
-        return false;
-      }
-
-      // Initial permission check
-      LocationPermission permission = await Geolocator.checkPermission();
-      print('Initial permission status: $permission');
-
-      // If permission not determined or denied, request it
-      if (!_permissionRequested &&
-          (permission == LocationPermission.denied ||
-              permission == LocationPermission.unableToDetermine)) {
-        // Wait a moment before requesting
-        await Future.delayed(const Duration(milliseconds: 200));
-        permission = await Geolocator.requestPermission();
-        _permissionRequested = true;
-        print('Permission after request: $permission');
-      }
-
-      return permission == LocationPermission.always ||
-          permission == LocationPermission.whileInUse;
+      // For web production, try a simpler approach
+      LocationPermission permission = await Geolocator.requestPermission();
+      print('Web permission status: $permission');
+      
+      // Return true if we got any kind of permission
+      return permission == LocationPermission.always || 
+             permission == LocationPermission.whileInUse;
     } catch (e) {
       print('Permission check error: $e');
       return false;
@@ -59,31 +43,18 @@ class PlatformService {
     }
 
     try {
-      // Initial permission check without showing error
-      final initialPermission = await Geolocator.checkPermission();
-      if (initialPermission == LocationPermission.denied ||
-          initialPermission == LocationPermission.unableToDetermine) {
-        // Wait for the permission dialog
-        await Future.delayed(const Duration(milliseconds: 500));
-      }
-
-      // Now check with proper error handling
-      final hasPermission = await checkLocationPermission();
-      if (!hasPermission) {
-        throw Exception('Please allow location access to continue');
-      }
-
+      // For web, just try to get position directly
       return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-        timeLimit: const Duration(seconds: 15),
+        desiredAccuracy: LocationAccuracy.low,  // Use low accuracy for better success rate
+      ).timeout(
+        const Duration(seconds: 5),  // Short timeout to avoid hanging
+        onTimeout: () {
+          throw TimeoutException('Location request timed out');
+        },
       );
     } catch (e) {
-      print('Get position error: $e');
-      if (e is TimeoutException) {
-        throw Exception('Location request timed out. Please try again.');
-      }
-      throw Exception(
-          'Please enable location access in your browser settings.');
+      print('Location error: $e');
+      throw Exception('Please allow location access in your browser and try again.');
     }
   }
 }

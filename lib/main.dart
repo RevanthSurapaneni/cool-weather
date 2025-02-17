@@ -217,33 +217,6 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
     });
 
     try {
-      if (kIsWeb) {
-        // Show "waiting for permission" message
-        setState(() {
-          _errorMessage = 'Requesting location access...';
-        });
-
-        // Give browser UI time to update
-        await Future.delayed(const Duration(milliseconds: 100));
-
-        final hasPermission = await PlatformService.checkLocationPermission();
-        if (!hasPermission) {
-          setState(() {
-            _errorMessage = 'Location access denied. Please:\n'
-                '1. Check the location icon in your browser\'s address bar\n'
-                '2. Make sure location access is allowed\n'
-                '3. Try again';
-            _isLoading = false;
-          });
-          return;
-        }
-
-        // Clear the "waiting" message before getting position
-        setState(() {
-          _errorMessage = 'Getting location...';
-        });
-      }
-
       final position = await PlatformService.getCurrentPosition();
 
       if (!mounted) return;
@@ -261,16 +234,12 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
     } catch (e) {
       if (!mounted) return;
 
-      print('Location error: $e');
       setState(() {
-        _errorMessage = kIsWeb
-            ? 'Location access failed. Please:\n'
-                '1. Click the location icon in your browser\'s address bar\n'
-                '2. Allow location access\n'
-                '3. Refresh the page and try again'
-            : 'Could not get location. Please check your location settings.';
+        _errorMessage =
+            'Could not get location. Please check if location access is enabled in your browser settings.';
         _isLoading = false;
       });
+      print('Location error: $e');
     }
   }
 
