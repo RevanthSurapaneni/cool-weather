@@ -236,3 +236,68 @@ class ForecastSkeleton extends StatelessWidget {
     );
   }
 }
+
+class AirQualitySkeletonWidget extends StatelessWidget {
+  const AirQualitySkeletonWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 4,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const SkeletonBox(width: 24, height: 24, isCircle: true),
+                const SizedBox(width: 8),
+                const SkeletonBox(width: 100, height: 28),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    SkeletonBox(width: 160, height: 32),
+                    SizedBox(height: 8),
+                    SkeletonBox(width: 200, height: 20),
+                  ],
+                ),
+                const SkeletonBox(width: 48, height: 48, isCircle: true),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 16,
+              runSpacing: 8,
+              children: List.generate(
+                6,
+                (_) => Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade800,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Column(
+                    children: [
+                      SkeletonBox(width: 40, height: 12),
+                      SizedBox(height: 4),
+                      SkeletonBox(width: 60, height: 16),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -487,10 +487,11 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                   ),
                 ),
               if (_isLoading) ...[
-                const CurrentWeatherSkeleton(), // Changed from WeatherSkeletonCard
-                const ForecastSkeleton(), // Changed from ForecastSkeletonCard
+                const CurrentWeatherSkeleton(),
+                const ForecastSkeleton(),
                 const SizedBox(height: 16),
-                const ForecastSkeleton(), // Changed from ForecastSkeletonCard
+                const ForecastSkeleton(),
+                const AirQualitySkeletonWidget(),
               ] else if (_weatherData != null) ...[
                 CurrentWeatherWidget(
                   weatherData: _weatherData!,
