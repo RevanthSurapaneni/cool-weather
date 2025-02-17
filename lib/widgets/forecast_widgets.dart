@@ -4,7 +4,7 @@ import 'dart:math' show min;
 import 'package:weather_icons/weather_icons.dart';
 import '../services/weather_service.dart';
 import '../utils/custom_scroll_behavior.dart';
-import 'air_quality_widget.dart'; // Add this import
+import 'air_quality_widget.dart'; 
 
 const Map<int, String> weatherDescriptions = {
   0: 'Clear sky',
@@ -521,7 +521,7 @@ class CurrentWeatherWidget extends StatelessWidget {
     String pm25Value = 'N/A';
 
     if (weatherData.airQualityData != null) {
-      final (description, color, _, _) =
+      final (description, color, _, _, _) =
           AirQualityUtils.getAQIInfo(weatherData.airQualityData!);
       airQualityDescription = description;
       airQualityColor = color;

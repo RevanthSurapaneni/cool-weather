@@ -2,85 +2,65 @@ import 'package:flutter/material.dart';
 import '../services/weather_service.dart';
 
 class AirQualityUtils {
-  // Each pollutant has different breakpoints based on EPA standards
-  static (String, double, double) _getMainPollutant(AirQualityData data) {
-    // Scale each pollutant to its own index (based on EPA standards)
-    Map<String, double> scaledValues = {
-      'PM2.5': data.pm2_5 / 12.0, // Good level is ≤ 12.0 μg/m³
-      'PM10': data.pm10 / 54.0, // Good level is ≤ 54 μg/m³
-      'NO₂': data.nitrogen_dioxide / 53, // Good level is ≤ 53 ppb
-      'O₃': data.ozone / 54, // Good level is ≤ 54 ppb (8-hour)
-      'SO₂': data.sulphur_dioxide / 35, // Good level is ≤ 35 ppb
-    };
-
-    // Find the worst pollutant (highest ratio compared to its "good" threshold)
-    String worstPollutant = 'PM2.5'; // default
-    double maxRatio = 0;
-    double actualValue = 0;
-
-    scaledValues.forEach((pollutant, ratio) {
-      if (ratio > maxRatio) {
-        maxRatio = ratio;
-        worstPollutant = pollutant;
-        switch (pollutant) {
-          case 'PM2.5':
-            actualValue = data.pm2_5;
-            break;
-          case 'PM10':
-            actualValue = data.pm10;
-            break;
-          case 'NO₂':
-            actualValue = data.nitrogen_dioxide;
-            break;
-          case 'O₃':
-            actualValue = data.ozone;
-            break;
-          case 'SO₂':
-            actualValue = data.sulphur_dioxide;
-            break;
-        }
-      }
-    });
-
-    return (worstPollutant, actualValue, maxRatio);
-  }
-
-  static (String, Color, String, double) getAQIInfo(AirQualityData data) {
-    final (pollutant, value, ratio) = _getMainPollutant(data);
-
-    // Determine AQI category based on ratio
-    String description;
+  static (String, Color, String, String, List<String>) getAQIInfo(
+      AirQualityData data) {
+    // Using US AQI standards
+    final int aqi = data.usAQI;
+    String category;
     Color color;
-    String advice;
+    String description;
+    String mainAdvice;
+    List<String> sensitiveGroups;
 
-    if (ratio <= 1.0) {
-      description = 'Good';
+    if (aqi <= 50) {
+      category = 'Good';
       color = Colors.green;
-      advice = 'Air quality is good, enjoy outdoor activities';
-    } else if (ratio <= 2.0) {
-      description = 'Moderate';
+      description = 'Air quality is satisfactory';
+      mainAdvice = 'Perfect for outdoor activities';
+      sensitiveGroups = ['None'];
+    } else if (aqi <= 100) {
+      category = 'Moderate';
       color = Colors.yellow;
-      advice =
-          'Acceptable air quality. Consider reducing prolonged outdoor activity if sensitive';
-    } else if (ratio <= 3.0) {
-      description = 'Unhealthy for Sensitive Groups';
+      description = 'Air quality is acceptable';
+      mainAdvice =
+          'Unusually sensitive people should consider reducing prolonged outdoor exertion';
+      sensitiveGroups = ['People with respiratory diseases'];
+    } else if (aqi <= 150) {
+      category = 'Unhealthy for Sensitive Groups';
       color = Colors.orange;
-      advice = 'Sensitive groups should limit outdoor activities';
-    } else if (ratio <= 4.0) {
-      description = 'Unhealthy';
+      description = 'Members of sensitive groups may experience health effects';
+      mainAdvice = 'Reduce prolonged or heavy outdoor exertion';
+      sensitiveGroups = [
+        'People with lung disease',
+        'Children and older adults',
+        'People who are active outdoors'
+      ];
+    } else if (aqi <= 200) {
+      category = 'Unhealthy';
       color = Colors.red;
-      advice = 'Everyone should reduce outdoor activities';
-    } else if (ratio <= 5.0) {
-      description = 'Very Unhealthy';
+      description = 'Everyone may begin to experience health effects';
+      mainAdvice = 'Avoid prolonged outdoor exertion';
+      sensitiveGroups = [
+        'People with respiratory or heart disease',
+        'Children and older adults',
+        'Everyone who is active outdoors'
+      ];
+    } else if (aqi <= 300) {
+      category = 'Very Unhealthy';
       color = Colors.purple;
-      advice = 'Avoid outdoor activities if possible';
+      description = 'Health warnings of emergency conditions';
+      mainAdvice = 'Avoid all outdoor activities';
+      sensitiveGroups = ['Everyone'];
     } else {
-      description = 'Hazardous';
+      category = 'Hazardous';
       color = Colors.brown;
-      advice = 'Stay indoors, avoid all outdoor activities';
+      description =
+          'Health alert: everyone may experience serious health effects';
+      mainAdvice = 'Stay indoors and keep activity levels low';
+      sensitiveGroups = ['Everyone'];
     }
 
-    return (description, color, pollutant, value);
+    return (category, color, description, mainAdvice, sensitiveGroups);
   }
 }
 
@@ -91,7 +71,7 @@ class AirQualityWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (description, color, pollutant, value) =
+    final (category, color, description, mainAdvice, sensitiveGroups) =
         AirQualityUtils.getAQIInfo(data);
 
     return Card(
@@ -121,7 +101,7 @@ class AirQualityWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      description,
+                      category,
                       style:
                           Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 color: color,
@@ -129,8 +109,9 @@ class AirQualityWidget extends StatelessWidget {
                               ),
                     ),
                     Text(
-                      'Main pollutant: $pollutant (${value.toStringAsFixed(1)} μg/m³)',
+                      'AQI: ${data.usAQI}',
                       style: TextStyle(
+                        fontSize: 16,
                         color: color,
                         fontWeight: FontWeight.w500,
                       ),
@@ -144,6 +125,37 @@ class AirQualityWidget extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            Text(
+              description,
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              mainAdvice,
+              style: TextStyle(
+                fontSize: 14,
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            if (sensitiveGroups.isNotEmpty &&
+                sensitiveGroups.first != 'None') ...[
+              const SizedBox(height: 16),
+              Text(
+                'Sensitive Groups:',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              ...sensitiveGroups.map((group) => Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.arrow_right, size: 16),
+                        Text(group),
+                      ],
+                    ),
+                  )),
+            ],
             const SizedBox(height: 16),
             Wrap(
               spacing: 16,
