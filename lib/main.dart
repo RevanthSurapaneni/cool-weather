@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter/foundation.dart';
 import 'services/weather_service.dart';
 import 'widgets/forecast_widgets.dart';
 import 'pages/settings_page.dart';
 import 'services/preferences_service.dart';
 import 'widgets/skeleton_widgets.dart';
 import 'widgets/air_quality_widget.dart';
+import 'services/platform_service.dart';
 
 const Map<int, String> weatherDescriptions = {
   0: 'Clear sky',
@@ -214,21 +216,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
       _errorMessage = '';
     });
     try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) throw Exception('Location services disabled');
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception('Location permissions denied');
-        }
-      }
-      if (permission == LocationPermission.deniedForever) {
-        throw Exception('Location permissions permanently denied');
-      }
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-      ).timeout(const Duration(seconds: 15));
+      final position = await PlatformService.getCurrentPosition();
       final location = Location(
         name:
             '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}',
@@ -236,13 +224,17 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
         longitude: position.longitude,
         country: '',
         state: '',
+        //admin1: '', // Add this if your Location model requires it
       );
       await _selectLocation(location, isCurrent: true);
     } catch (e) {
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = kIsWeb
+            ? 'Please ensure location access is enabled in your browser settings and try again.'
+            : 'Could not get location. Please check your location settings.';
         _isLoading = false;
       });
+      print('Location error: $e'); // Add logging for debugging
     }
   }
 
