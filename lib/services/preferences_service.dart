@@ -3,7 +3,6 @@ import 'dart:convert';
 
 class PreferencesService {
   static const String _kUseMetricKey = 'use_metric';
-  static const String _kUseDarkModeKey = 'use_dark_mode';
   static const String _kLastLocationKey = 'last_location';
   static const String _kRecentSearchesKey = 'recent_searches';
 
@@ -24,17 +23,7 @@ class PreferencesService {
   }
 
   bool getUseMetric() {
-    // Default to false (imperial)
     return _prefs.getBool(_kUseMetricKey) ?? false;
-  }
-
-  // Theme Preferences
-  Future<void> saveUseDarkMode(bool value) async {
-    await _prefs.setBool(_kUseDarkModeKey, value);
-  }
-
-  bool getUseDarkMode() {
-    return _prefs.getBool(_kUseDarkModeKey) ?? false;
   }
 
   // Location Preferences

@@ -6,6 +6,7 @@ import 'widgets/forecast_widgets.dart';
 import 'pages/settings_page.dart';
 import 'services/preferences_service.dart';
 import 'widgets/skeleton_widgets.dart';
+import 'widgets/air_quality_widget.dart';
 
 const Map<int, String> weatherDescriptions = {
   0: 'Clear sky',
@@ -48,59 +49,18 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final _prefs = PreferencesService();
-  bool _useMetric = false; // Explicitly set default to false (imperial)
-  bool _useDarkMode = false;
+  bool _useMetric = false;
 
   @override
   void initState() {
     super.initState();
     _loadPreferences();
-    _setupSystemTheme();
-  }
-
-  void _setupSystemTheme() {
-    final window = WidgetsBinding.instance.window;
-    _useDarkMode = _prefs.getUseDarkMode(); // Use saved preference first
-
-    // Update if system theme changes
-    window.onPlatformBrightnessChanged = () {
-      if (mounted) {
-        setState(() {
-          _useDarkMode = window.platformBrightness == Brightness.dark;
-          _prefs.saveUseDarkMode(_useDarkMode);
-        });
-      }
-    };
   }
 
   Future<void> _loadPreferences() async {
     setState(() {
-      _useMetric =
-          _prefs.getUseMetric(); // Will now default to false from preferences
-      _useDarkMode = _prefs.getUseDarkMode();
+      _useMetric = _prefs.getUseMetric();
     });
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Get system theme preference
-    final window = WidgetsBinding.instance.window;
-    _useDarkMode = window.platformBrightness == Brightness.dark;
-
-    // Listen for system theme changes
-    window.onPlatformBrightnessChanged = () {
-      setState(() {
-        _useDarkMode = window.platformBrightness == Brightness.dark;
-      });
-    };
-  }
-
-  @override
-  void dispose() {
-    // Remove listener when disposing
-    WidgetsBinding.instance.window.onPlatformBrightnessChanged = null;
-    super.dispose();
   }
 
   void _updateUnits(bool value) {
@@ -110,31 +70,34 @@ class _MyAppState extends State<MyApp> {
     _prefs.saveUseMetric(value);
   }
 
-  void _updateTheme(bool value) {
-    setState(() {
-      _useDarkMode = value;
-    });
-    _prefs.saveUseDarkMode(value);
-  }
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Weather App',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-          brightness: _useDarkMode ? Brightness.dark : Brightness.light,
+      themeMode: ThemeMode.dark,
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.dark(
+          primary: Colors.blue,
+          secondary: Colors.blueAccent,
+          surface: Colors.grey.shade900,
+          background: const Color(0xFF121212), // Material 3 dark background
         ),
         useMaterial3: true,
         fontFamily: 'Poppins',
-        appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
+        appBarTheme: AppBarTheme(
+          centerTitle: true,
+          elevation: 0,
+          backgroundColor: Colors.grey.shade900,
+        ),
         cardTheme: CardTheme(
-          elevation: 2,
+          elevation: 4,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
+          color: Colors.grey.shade900,
         ),
+        scaffoldBackgroundColor:
+            const Color(0xFF121212), // Material 3 dark background
         textTheme: TextTheme(
           headlineSmall: const TextStyle(
             fontFamily: 'Poppins',
@@ -400,8 +363,6 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Weather App'),
@@ -421,29 +382,20 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () async {
-              final oldMetric = widget.useMetric; // Store the old value
+              final oldMetric = widget.useMetric;
               await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => SettingsPage(
                     useMetric: widget.useMetric,
-                    useDarkMode:
-                        Theme.of(context).brightness == Brightness.dark,
-                    onUnitChanged: (bool value) {
-                      // First update the preference/state
-                      widget.onUnitsChanged(value);
-                    },
-                    onThemeChanged:
-                        (context.findAncestorStateOfType<_MyAppState>())
-                                ?._updateTheme ??
-                            (_) {},
+                    onUnitChanged: widget.onUnitsChanged,
                   ),
                 ),
               );
 
               // After settings page is closed, check if units actually changed
               if (oldMetric != widget.useMetric && mounted) {
-                await _fetchWeather(); // Only fetch if units changed
+                await _fetchWeather();
               }
             },
           ),
@@ -456,98 +408,84 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
             children: [
               Padding(
                 padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    TextFormField(
-                      controller: _searchController,
-                      focusNode: _focusNode,
-                      style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                      cursorWidth: 2.0,
-                      cursorRadius: const Radius.circular(1),
-                      decoration: InputDecoration(
-                        labelText: 'Search Location',
-                        hintText: 'Enter city name',
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() {
-                                    _locations = [];
-                                    _errorMessage = '';
-                                  });
-                                },
-                              )
-                            : null,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? Colors.grey.shade600
-                                : Colors.grey.shade400,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.primary,
-                            width: 2,
-                          ),
-                        ),
-                        filled: true,
-                        fillColor: isDark
-                            ? Theme.of(context).colorScheme.surface
-                            : Colors.white,
+                child: TextFormField(
+                  controller: _searchController,
+                  focusNode: _focusNode,
+                  style: const TextStyle(color: Colors.white),
+                  cursorWidth: 2.0,
+                  cursorRadius: const Radius.circular(1),
+                  decoration: InputDecoration(
+                    labelText: 'Search Location',
+                    hintText: 'Enter city name',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _locations = [];
+                                _errorMessage = '';
+                              });
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade600),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Colors.blue,
+                        width: 2,
                       ),
                     ),
-                    if (_locations.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Card(
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            padding: EdgeInsets.zero,
-                            itemCount: _locations.length,
-                            separatorBuilder: (context, index) => Divider(
-                              height: 1,
-                              indent: 16,
-                              endIndent: 16,
-                              color: Theme.of(context)
-                                  .dividerColor
-                                  .withOpacity(0.5),
-                            ),
-                            itemBuilder: (context, index) {
-                              return ListTile(
-                                title: Text(
-                                  _locations[index].displayName,
-                                  style: Theme.of(context).textTheme.bodyLarge,
-                                ),
-                                trailing: Icon(
-                                  Icons.arrow_forward_ios,
-                                  size: 16,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                                onTap: () => _selectLocation(_locations[index]),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                  ],
+                    filled: true,
+                    fillColor: Colors.grey.shade900,
+                  ),
                 ),
               ),
+              if (_locations.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: EdgeInsets.zero,
+                      itemCount: _locations.length,
+                      separatorBuilder: (context, index) => Divider(
+                        height: 1,
+                        indent: 16,
+                        endIndent: 16,
+                        color: Theme.of(context).dividerColor.withOpacity(0.5),
+                      ),
+                      itemBuilder: (context, index) {
+                        return ListTile(
+                          title: Text(
+                            _locations[index].displayName,
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                          trailing: Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          onTap: () => _selectLocation(_locations[index]),
+                        );
+                      },
+                    ),
+                  ),
+                ),
               if (_isLoading) ...[
                 const CurrentWeatherSkeleton(), // Changed from WeatherSkeletonCard
                 const ForecastSkeleton(), // Changed from ForecastSkeletonCard
@@ -575,6 +513,8 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                   _dailyController,
                   widget.useMetric,
                 ),
+                if (_weatherData?.airQualityData != null)
+                  AirQualityWidget(data: _weatherData!.airQualityData!),
               ],
               if (_errorMessage.isNotEmpty)
                 Padding(

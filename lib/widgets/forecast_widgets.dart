@@ -4,6 +4,7 @@ import 'dart:math' show min;
 import 'package:weather_icons/weather_icons.dart';
 import '../services/weather_service.dart';
 import '../utils/custom_scroll_behavior.dart';
+import 'air_quality_widget.dart'; // Add this import
 
 const Map<int, String> weatherDescriptions = {
   0: 'Clear sky',
@@ -39,10 +40,8 @@ Widget buildHourlyForecast(
     DateTime sunset,
     ScrollController controller,
     bool useMetric) {
-  // Added useMetric parameter
   return Builder(
     builder: (context) {
-      final isDark = Theme.of(context).brightness == Brightness.dark;
       final List<String> times = List<String>.from(hourly['time']);
       final List<dynamic> temps = hourly['temperature_2m'];
       final List<dynamic> codes = hourly['weathercode'];
@@ -93,29 +92,8 @@ Widget buildHourlyForecast(
                       width: 120,
                       margin: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
-                        // Replace gradient with solid color and opacity
-                        color: isDark
-                            ? Colors.grey.shade900
-                            : Colors.white.withOpacity(0.9),
-                        // Add subtle border for light mode visibility
-                        border: Border.all(
-                          color: isDark
-                              ? Colors.transparent
-                              : Colors.blue.shade100,
-                          width: 1,
-                        ),
+                        color: Colors.grey.shade800,
                         borderRadius: BorderRadius.circular(12),
-                        // Modify shadow for better visibility
-                        boxShadow: isDark
-                            ? null
-                            : [
-                                BoxShadow(
-                                  color: Colors.blue.shade100,
-                                  blurRadius: 8,
-                                  spreadRadius: 0,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
                       ),
                       padding: const EdgeInsets.symmetric(
                           vertical: 12, horizontal: 4),
@@ -126,7 +104,10 @@ Widget buildHourlyForecast(
                             isCurrent
                                 ? 'Now'
                                 : DateFormat('ha').format(forecastTime),
-                            style: const TextStyle(fontSize: 12),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.white,
+                            ),
                           ),
                           buildWeatherIcon(
                               code, forecastTime, 40, false, sunrise, sunset),
@@ -134,22 +115,26 @@ Widget buildHourlyForecast(
                             description,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                                fontSize: 10,
-                                color: isDark
-                                    ? Colors.grey.shade300
-                                    : Colors.grey),
+                              fontSize: 10,
+                              color: Colors.grey.shade400,
+                            ),
                           ),
                           if (precipitation != null &&
                               idx < precipitation.length)
-                            Text('${precipitation[idx].round()}%',
-                                style: const TextStyle(
-                                    fontSize: 12, color: Colors.blue)),
-                          Text('${temps[idx].round()}°${useMetric ? "C" : "F"}',
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.normal,
-                                  color:
-                                      isDark ? Colors.white : Colors.black87)),
+                            Text(
+                              '${precipitation[idx].round()}%',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.blue,
+                              ),
+                            ),
+                          Text(
+                            '${temps[idx].round()}°${useMetric ? "C" : "F"}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                          ),
                         ],
                       ),
                     );
@@ -166,10 +151,8 @@ Widget buildHourlyForecast(
 
 Widget buildDailyForecast(
     Map<String, dynamic> daily, ScrollController controller, bool useMetric) {
-  // Added useMetric parameter
   return Builder(
     builder: (context) {
-      final isDark = Theme.of(context).brightness == Brightness.dark;
       final List<dynamic> times = daily['time'];
       final List<dynamic> maxTemps = daily['temperature_2m_max'];
       final List<dynamic> minTemps = daily['temperature_2m_min'];
@@ -208,29 +191,8 @@ Widget buildDailyForecast(
                       width: 120,
                       margin: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
-                        // Replace gradient with solid color and opacity
-                        color: isDark
-                            ? Colors.grey.shade900
-                            : Colors.white.withOpacity(0.9),
-                        // Add subtle border for light mode visibility
-                        border: Border.all(
-                          color: isDark
-                              ? Colors.transparent
-                              : Colors.blue.shade100,
-                          width: 1,
-                        ),
+                        color: Colors.grey.shade800,
                         borderRadius: BorderRadius.circular(12),
-                        // Modify shadow for better visibility
-                        boxShadow: isDark
-                            ? null
-                            : [
-                                BoxShadow(
-                                  color: Colors.blue.shade100,
-                                  blurRadius: 8,
-                                  spreadRadius: 0,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
                       ),
                       padding: const EdgeInsets.symmetric(
                           vertical: 12, horizontal: 4),
@@ -240,31 +202,35 @@ Widget buildDailyForecast(
                           Text(
                             isToday ? 'Today' : DateFormat('E').format(date),
                             style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: isToday
-                                    ? FontWeight.bold
-                                    : FontWeight.normal),
+                              fontSize: 12,
+                              fontWeight:
+                                  isToday ? FontWeight.bold : FontWeight.normal,
+                              color: Colors.white,
+                            ),
                           ),
                           buildWeatherIcon(code, date, 40, true),
                           Text(
                             desc,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                                fontSize: 10,
-                                color: isDark
-                                    ? Colors.grey.shade300
-                                    : Colors.grey),
+                              fontSize: 10,
+                              color: Colors.grey.shade400,
+                            ),
                           ),
-                          Text(precip,
-                              style: const TextStyle(
-                                  fontSize: 12, color: Colors.blue)),
                           Text(
-                              '${maxTemps[index].round()}°${useMetric ? "C" : "F"} / ${minTemps[index].round()}°${useMetric ? "C" : "F"}',
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.normal,
-                                  color:
-                                      isDark ? Colors.white : Colors.black87)),
+                            precip,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue,
+                            ),
+                          ),
+                          Text(
+                            '${maxTemps[index].round()}°${useMetric ? "C" : "F"} / ${minTemps[index].round()}°${useMetric ? "C" : "F"}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                          ),
                         ],
                       ),
                     );
@@ -472,38 +438,6 @@ class CurrentWeatherWidget extends StatelessWidget {
     }
   }
 
-  String _getAirQualityDescription(double pm25) {
-    if (pm25 <= 12.0) {
-      return 'Good';
-    } else if (pm25 <= 35.4) {
-      return 'Moderate';
-    } else if (pm25 <= 55.4) {
-      return 'Unhealthy for Sensitive Groups';
-    } else if (pm25 <= 150.4) {
-      return 'Unhealthy';
-    } else if (pm25 <= 250.4) {
-      return 'Very Unhealthy';
-    } else {
-      return 'Hazardous';
-    }
-  }
-
-  Color _getAirQualityColor(double pm25) {
-    if (pm25 <= 12.0) {
-      return Colors.lightGreen;
-    } else if (pm25 <= 35.4) {
-      return Colors.yellow;
-    } else if (pm25 <= 55.4) {
-      return Colors.orange;
-    } else if (pm25 <= 150.4) {
-      return Colors.red;
-    } else if (pm25 <= 250.4) {
-      return Colors.purple;
-    } else {
-      return Colors.brown;
-    }
-  }
-
   // Updated _buildWeatherDetail: fixed width added for uniform sizing
   Widget _buildWeatherDetail(IconData icon, String label, String value,
       [Color? bgColor, Color? textColor]) {
@@ -513,20 +447,24 @@ class CurrentWeatherWidget extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [bgColor ?? const Color(0xFF80DFFF), const Color(0xFF3C8EDB)],
+          colors: [
+            // Darker blue gradient for better contrast
+            const Color(0xFF1A237E), // Dark blue
+            const Color(0xFF303F9F), // Slightly lighter blue
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.blueAccent.withOpacity(0.3),
+          color: Colors.blue.withOpacity(0.3),
           width: 1,
         ),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black12,
+            color: Colors.black26,
             blurRadius: 6,
-            offset: const Offset(0, 3),
+            offset: Offset(0, 3),
           ),
         ],
       ),
@@ -538,7 +476,7 @@ class CurrentWeatherWidget extends StatelessWidget {
             label,
             style: const TextStyle(
               fontSize: 14,
-              color: Colors.white70,
+              color: Colors.white, // Brighter text
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -548,7 +486,9 @@ class CurrentWeatherWidget extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: textColor ?? Colors.white,
+              color: textColor?.withOpacity(0.95) ??
+                  Colors
+                      .white, // Slightly adjusted opacity for better visibility
             ),
           ),
         ],
@@ -581,10 +521,10 @@ class CurrentWeatherWidget extends StatelessWidget {
     String pm25Value = 'N/A';
 
     if (weatherData.airQualityData != null) {
-      double pm25 = weatherData.airQualityData!.pm2_5;
-      pm25Value = pm25.toStringAsFixed(1);
-      airQualityDescription = _getAirQualityDescription(pm25);
-      airQualityColor = _getAirQualityColor(pm25);
+      final (description, color, _, _) =
+          AirQualityUtils.getAQIInfo(weatherData.airQualityData!);
+      airQualityDescription = description;
+      airQualityColor = color;
     }
 
     if (weatherData.hourly['time'] != null) {

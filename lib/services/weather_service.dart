@@ -55,7 +55,7 @@ class WeatherService {
       'latitude': lat.toString(),
       'longitude': lon.toString(),
       'hourly':
-          'pm2_5,pm10,carbon_monoxide,sulphur_dioxide,ozone,nitrogen_dioxide',
+          'pm2_5,pm10,carbon_monoxide,sulphur_dioxide,ozone,nitrogen_dioxide,european_aqi',
       'timezone': 'auto',
     };
 
@@ -230,6 +230,7 @@ class AirQualityData {
   final double sulphur_dioxide;
   final double ozone;
   final double nitrogen_dioxide;
+  final int europeanAQI;
   final DateTime time;
 
   AirQualityData({
@@ -239,6 +240,7 @@ class AirQualityData {
     required this.sulphur_dioxide,
     required this.ozone,
     required this.nitrogen_dioxide,
+    required this.europeanAQI,
     required this.time,
   });
 
@@ -268,6 +270,7 @@ class AirQualityData {
     final ozoneList = json['hourly']['ozone'] as List<dynamic>?;
     final nitrogenDioxidelist =
         json['hourly']['nitrogen_dioxide'] as List<dynamic>?;
+    final europeanAQIList = json['hourly']['european_aqi'] as List<dynamic>?;
 
     print('PM2.5 List: $pm2_5List'); // Log the PM2.5 list
     print('Current Index: $currentIndex'); // Log the current index
@@ -302,6 +305,11 @@ class AirQualityData {
             fallbackIndex < nitrogenDioxidelist.length)
         ? (nitrogenDioxidelist[fallbackIndex] as num?)?.toDouble() ?? 0.0
         : 0.0;
+    final europeanAQI = (europeanAQIList != null &&
+            fallbackIndex != -1 &&
+            fallbackIndex < europeanAQIList.length)
+        ? europeanAQIList[fallbackIndex] as int
+        : 0;
 
     return AirQualityData(
       pm2_5: pm2_5,
@@ -310,6 +318,7 @@ class AirQualityData {
       sulphur_dioxide: sulphurDioxide,
       ozone: ozone,
       nitrogen_dioxide: nitrogenDioxide,
+      europeanAQI: europeanAQI,
       time: (fallbackIndex != -1 && timeList.length > fallbackIndex)
           ? DateTime.parse(timeList[fallbackIndex])
           : DateTime.now(),

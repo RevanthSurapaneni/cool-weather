@@ -2,16 +2,12 @@ import 'package:flutter/material.dart';
 
 class SettingsPage extends StatelessWidget {
   final bool useMetric;
-  final bool useDarkMode;
   final Function(bool) onUnitChanged;
-  final Function(bool) onThemeChanged;
 
   const SettingsPage({
     super.key,
     required this.useMetric,
-    required this.useDarkMode,
     required this.onUnitChanged,
-    required this.onThemeChanged,
   });
 
   @override
@@ -28,14 +24,6 @@ class SettingsPage extends StatelessWidget {
             trailing: Switch(
               value: useMetric,
               onChanged: onUnitChanged,
-            ),
-          ),
-          ListTile(
-            title: const Text('Dark Mode'),
-            subtitle: const Text('Toggle dark/light theme'),
-            trailing: Switch(
-              value: useDarkMode,
-              onChanged: onThemeChanged,
             ),
           ),
         ],
