@@ -26,42 +26,43 @@ class PlatformService {
     try {
       final userAgent = html.window.navigator.userAgent.toLowerCase();
       final isFirefox = userAgent.contains('firefox');
-      print('Browser: ${isFirefox ? "Firefox" : "Other"}');
+      print(
+          'Checking location permission for: ${isFirefox ? "Firefox" : "Other browser"}');
 
-      // Check if we requested permission recently (within last 5 seconds)
-      if (_lastPermissionRequest != null) {
-        final timeSinceLastRequest =
-            DateTime.now().difference(_lastPermissionRequest!);
-        if (timeSinceLastRequest.inSeconds < 5) {
-          await Future.delayed(const Duration(seconds: 1));
+      // For Firefox, we need to explicitly check if geolocation is available
+      if (isFirefox) {
+        if (html.window.navigator.geolocation == null) {
+          print('Geolocation API not available');
+          return false;
         }
       }
 
-      LocationPermission permission = await Geolocator.checkPermission();
+      // First check if location services are enabled
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        print('Location services are disabled');
+        return false;
+      }
 
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.unableToDetermine ||
-          !_permissionRequested) {
-        _lastPermissionRequest = DateTime.now();
-
-        // Firefox specific: wait a moment before requesting
-        if (isFirefox) {
-          await Future.delayed(const Duration(milliseconds: 300));
-        }
-
-        permission = await Geolocator.requestPermission();
+      if (!_permissionRequested) {
+        print('Requesting permission for the first time');
         _permissionRequested = true;
 
-        if (isFirefox && permission == LocationPermission.denied) {
+        // For Firefox, use a longer initial delay
+        if (isFirefox) {
           await Future.delayed(const Duration(milliseconds: 500));
-          permission = await Geolocator.requestPermission();
         }
+
+        final permission = await Geolocator.requestPermission();
+        print('Initial permission result: $permission');
+
+        return permission == LocationPermission.always ||
+            permission == LocationPermission.whileInUse;
       }
 
-      final result = permission == LocationPermission.always ||
+      final permission = await Geolocator.checkPermission();
+      return permission == LocationPermission.always ||
           permission == LocationPermission.whileInUse;
-      print('Permission status: $permission, Result: $result');
-      return result;
     } catch (e) {
       print('Permission check error: $e');
       return false;
@@ -84,39 +85,39 @@ class PlatformService {
         throw Exception('Location permission not granted');
       }
 
-      // Firefox: wait after permission before getting position
-      if (isFirefox) {
-        await Future.delayed(const Duration(milliseconds: 1000));
-      }
+      // For Firefox, we need more attempts with longer timeouts
+      final maxAttempts = isFirefox ? 5 : 3;
+      final timeoutSeconds = isFirefox ? 60 : 20;
 
-      Position? position;
-      int attempts = 0;
-
-      while (position == null && attempts < 3) {
+      for (int attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
-          position = await Geolocator.getCurrentPosition(
+          print('Location attempt $attempt of $maxAttempts');
+
+          // Wait a bit longer between attempts for Firefox
+          if (attempt > 1 && isFirefox) {
+            await Future.delayed(const Duration(seconds: 2));
+          }
+
+          return await Geolocator.getCurrentPosition(
             desiredAccuracy:
-                isFirefox ? LocationAccuracy.lowest : LocationAccuracy.medium,
-            timeLimit: Duration(seconds: isFirefox ? 30 : 10),
+                isFirefox ? LocationAccuracy.reduced : LocationAccuracy.medium,
+            timeLimit: Duration(seconds: timeoutSeconds),
           );
         } catch (e) {
-          attempts++;
-          if (attempts == 3) rethrow;
-          await Future.delayed(const Duration(seconds: 1));
-          print('Location attempt $attempts failed: $e');
+          print('Attempt $attempt failed: $e');
+          if (attempt == maxAttempts) rethrow;
         }
       }
 
-      return position ??
-          (throw Exception('Could not get location after multiple attempts'));
+      throw Exception('Failed to get location after $maxAttempts attempts');
     } catch (e) {
       print('Get position error: $e');
       throw Exception(isFirefox
-          ? 'Firefox location access failed. Please:\n'
-              '1. Make sure you clicked "Allow" on the permission popup\n'
-              '2. Check that location access is enabled in Firefox settings\n'
-              '3. Refresh the page and try again'
-          : 'Location access failed. Please allow location access and try again.');
+          ? 'Firefox location request failed. Please ensure:\n'
+              '1. You allowed location access in the popup\n'
+              '2. Location is enabled in Firefox settings\n'
+              '3. Try refreshing the page'
+          : 'Location access failed. Please check your settings and try again.');
     }
   }
 }
