@@ -218,24 +218,30 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
 
     try {
       if (kIsWeb) {
-        // For Firefox, show a message to the user first
+        // Show "waiting for permission" message
         setState(() {
-          _errorMessage =
-              'Please allow location access when prompted by your browser...';
+          _errorMessage = 'Requesting location access...';
         });
 
-        // Add a small delay to ensure the message is shown
+        // Give browser UI time to update
         await Future.delayed(const Duration(milliseconds: 100));
 
         final hasPermission = await PlatformService.checkLocationPermission();
         if (!hasPermission) {
           setState(() {
-            _errorMessage =
-                'Location access was denied. Please allow location access in your browser settings and try again.';
+            _errorMessage = 'Location access denied. Please:\n'
+                '1. Check the location icon in your browser\'s address bar\n'
+                '2. Make sure location access is allowed\n'
+                '3. Try again';
             _isLoading = false;
           });
           return;
         }
+
+        // Clear the "waiting" message before getting position
+        setState(() {
+          _errorMessage = 'Getting location...';
+        });
       }
 
       final position = await PlatformService.getCurrentPosition();
@@ -255,6 +261,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
     } catch (e) {
       if (!mounted) return;
 
+      print('Location error: $e');
       setState(() {
         _errorMessage = kIsWeb
             ? 'Location access failed. Please:\n'
@@ -264,7 +271,6 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
             : 'Could not get location. Please check your location settings.';
         _isLoading = false;
       });
-      print('Location error: $e');
     }
   }
 

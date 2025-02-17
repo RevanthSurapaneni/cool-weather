@@ -1,39 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
+import 'dart:html' as html;
 
 class PlatformService {
+  static bool _permissionRequested = false;
+
   static Future<bool> checkLocationPermission() async {
-    if (kIsWeb) {
-      try {
-        // First check if the service is enabled
-        final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-        if (!serviceEnabled) {
-          print('Location services are disabled');
-          return false;
-        }
-
-        // For Firefox, check current permission first
-        LocationPermission permission = await Geolocator.checkPermission();
-
-        // If we don't have permission yet, request it
-        if (permission == LocationPermission.denied ||
-            permission == LocationPermission.unableToDetermine) {
-          // Firefox needs a user interaction before requesting permission
-          await Future.delayed(const Duration(milliseconds: 100));
-          permission = await Geolocator.requestPermission();
-        }
-
-        final result = permission == LocationPermission.always ||
-            permission == LocationPermission.whileInUse;
-        print('Location permission check result: $permission');
-        return result;
-      } catch (e) {
-        print('Location permission check failed: $e');
-        return false;
-      }
-    } else {
-      // Mobile/desktop location check
+    if (!kIsWeb) {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         return false;
@@ -47,25 +21,79 @@ class PlatformService {
       return permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always;
     }
+
+    try {
+      // For web browsers
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        print('Location services are disabled');
+        return false;
+      }
+
+      // Check if browser is Firefox
+      final userAgent = html.window.navigator.userAgent.toLowerCase();
+      final isFirefox = userAgent.contains('firefox');
+      print('Browser: ${isFirefox ? "Firefox" : "Other"}');
+
+      LocationPermission permission = await Geolocator.checkPermission();
+
+      if (!_permissionRequested) {
+        // First time permission request
+        await Future.delayed(const Duration(milliseconds: 200));
+        permission = await Geolocator.requestPermission();
+        _permissionRequested = true;
+
+        if (isFirefox && permission == LocationPermission.denied) {
+          // Firefox might need an extra moment
+          await Future.delayed(const Duration(milliseconds: 500));
+          permission = await Geolocator.requestPermission();
+        }
+      }
+
+      final result = permission == LocationPermission.always ||
+          permission == LocationPermission.whileInUse;
+      print('Permission result: $permission');
+      return result;
+    } catch (e) {
+      print('Permission check error: $e');
+      return false;
+    }
   }
 
   static Future<Position> getCurrentPosition() async {
-    if (kIsWeb) {
-      try {
-        // For Firefox, we need to be more patient
-        return await Geolocator.getCurrentPosition(
-          desiredAccuracy:
-              LocationAccuracy.low, // Lower accuracy for faster response
-          timeLimit: const Duration(seconds: 10), // Add explicit time limit
-        );
-      } catch (e) {
-        print('Location error: $e');
-        throw Exception(
-            'Could not get location. Please ensure location access is enabled in your browser settings.');
-      }
+    if (!kIsWeb) {
+      return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+      );
     }
-    return await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.medium,
-    );
+
+    final userAgent = html.window.navigator.userAgent.toLowerCase();
+    final isFirefox = userAgent.contains('firefox');
+
+    try {
+      final hasPermission = await checkLocationPermission();
+      if (!hasPermission) {
+        throw Exception('Location permission not granted');
+      }
+
+      if (isFirefox) {
+        // Firefox needs more time and lower accuracy
+        return await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.low,
+          timeLimit: const Duration(seconds: 20),
+        );
+      } else {
+        // Other browsers
+        return await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 10),
+        );
+      }
+    } catch (e) {
+      print('Get position error: $e');
+      throw Exception(isFirefox
+          ? 'Firefox location access failed. Please check your browser settings and try again.'
+          : 'Location access failed. Please allow location access and try again.');
+    }
   }
 }
