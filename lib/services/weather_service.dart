@@ -1,6 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, compute;
 import '../utils/weather_utils.dart';
 import '../models/weather_model.dart';
 import '../models/app_location.dart';
@@ -132,17 +132,40 @@ class WeatherService {
     };
 
     try {
+      await _throttleApiCall();
       final url = _getUrl(_weatherBaseUrl, params);
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
-        return WeatherData.fromJson(jsonDecode(response.body));
+        // Parse on a background isolate for large responses
+        return compute(_parseWeatherResponse, response.body);
       } else {
         throw Exception('API error: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('Failed to load weather data: $e');
     }
+  }
+
+  // Isolate-compatible parsing function
+  static WeatherData _parseWeatherResponse(String responseBody) {
+    final json = jsonDecode(responseBody);
+    return WeatherData.fromJson(json);
+  }
+
+  // Add request throttling to avoid API rate limits
+  static DateTime _lastApiCallTime =
+      DateTime.now().subtract(const Duration(seconds: 1));
+  static Future<void> _throttleApiCall() async {
+    final now = DateTime.now();
+    final timeSinceLastCall = now.difference(_lastApiCallTime);
+
+    if (timeSinceLastCall.inMilliseconds < 300) {
+      await Future.delayed(
+          const Duration(milliseconds: 300) - timeSinceLastCall);
+    }
+
+    _lastApiCallTime = DateTime.now();
   }
 
   Future<WeatherModel> getWeatherByCity(String city) async {

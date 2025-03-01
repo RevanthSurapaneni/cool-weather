@@ -12,6 +12,65 @@ import '../utils/ui_constants.dart';
 import 'weather_description_box.dart';
 import 'precipitation_indicator.dart';
 
+// Add these utility classes at the top level
+extension WeatherPerformanceUtils on Widget {
+  Widget withRepaintBoundary() {
+    return RepaintBoundary(child: this);
+  }
+}
+
+mixin ChartOptimizationMixin<T extends StatefulWidget> on State<T> {
+  Paint? _linePaint;
+  Paint? _fillPaint;
+
+  Paint getLinePaint(Color color) {
+    return _linePaint ??= Paint()
+      ..color = color
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke
+      ..strokeJoin = StrokeJoin.round;
+  }
+
+  Paint getFillPaint(List<Color> colors, {bool vertical = true}) {
+    return _fillPaint ??= Paint()
+      ..shader = ui.Gradient.linear(
+        vertical ? const Offset(0, 0) : const Offset(0, 10),
+        vertical ? const Offset(0, 100) : const Offset(100, 10),
+        colors,
+        [0.0, 1.0],
+      )
+      ..style = PaintingStyle.fill;
+  }
+
+  void _precalculateValues() {
+    // For subclasses to override
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _precalculateValues();
+  }
+}
+
+// Simple data class to efficiently store hourly weather data
+class HourlyWeatherPoint {
+  final DateTime time;
+  final double temperature;
+  final int weatherCode;
+  final double precipProbability;
+
+  const HourlyWeatherPoint({
+    required this.time,
+    required this.temperature,
+    required this.weatherCode,
+    required this.precipProbability,
+  });
+}
+
+// Add this constant for consistent spacing
+const sizedBoxHeight16 = SizedBox(height: 16);
+
 // buildHourlyForecast function removed
 
 Widget buildDailyForecast(
@@ -536,7 +595,8 @@ class WeatherChart extends StatefulWidget {
   State<WeatherChart> createState() => _WeatherChartState();
 }
 
-class _WeatherChartState extends State<WeatherChart> {
+class _WeatherChartState extends State<WeatherChart>
+    with ChartOptimizationMixin {
   int? _highlightedHour;
   final ScrollController _scrollController = ScrollController();
 
@@ -2095,7 +2155,12 @@ class DailyTemperatureChartPainter extends CustomPainter {
       highlightedDay != oldDelegate.highlightedDay;
 }
 
-class _WeeklyWeatherChartState extends State<WeeklyWeatherChart> {
+class _WeeklyWeatherChartState extends State<WeeklyWeatherChart>
+    with ChartOptimizationMixin, AutomaticKeepAliveClientMixin {
+  // Add keep alive to prevent rebuilds when scrolling
+  @override
+  bool get wantKeepAlive => true;
+
   int? _highlightedDay;
   final ScrollController _scrollController = ScrollController();
 
@@ -2122,6 +2187,7 @@ class _WeeklyWeatherChartState extends State<WeeklyWeatherChart> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     // Safely access data
     final List<String> dates = List<String>.from(widget.daily['time'] ?? []);
     if (dates.isEmpty) return const SizedBox.shrink(); // No data

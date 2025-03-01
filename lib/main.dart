@@ -148,6 +148,8 @@ class WeatherHomePage extends StatefulWidget {
   State<WeatherHomePage> createState() => _WeatherHomePageState();
 }
 
+const sizedBoxHeight16 = SizedBox(height: 16);
+
 class _WeatherHomePageState extends State<WeatherHomePage> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
@@ -165,6 +167,8 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
   final ScrollController _dailyController = ScrollController();
   final ScrollController _mainScrollController = ScrollController();
   final _prefs = PreferencesService();
+  final Map<String, WeatherData> _weatherCache = {};
+  Map<String, VoidCallback> _locationCallbacks = {};
 
   @override
   void initState() {
@@ -320,12 +324,34 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
     }
   }
 
-  Future<void> _fetchWeather() async {
+  Future<void> _fetchWeather({bool forceRefresh = false}) async {
     if (_selectedLocation == null) return;
+
+    // Generate a cache key based on location and units
+    final cacheKey =
+        '${_selectedLocation!.latitude},${_selectedLocation!.longitude}_${widget.useMetric}';
+
+    // Check if we have a cached version less than 10 minutes old
+    final cachedData = _weatherCache[cacheKey];
+    final cacheExpiry = DateTime.now().subtract(const Duration(minutes: 10));
+
+    // Only use cache if not forcing a refresh AND cache is recent
+    if (!forceRefresh &&
+        cachedData != null &&
+        _lastUpdated != null &&
+        _lastUpdated!.isAfter(cacheExpiry)) {
+      setState(() {
+        _weatherData = cachedData;
+        _isLoading = false;
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
+
     try {
       final weather = await WeatherService.getWeather(
         _selectedLocation!.latitude,
@@ -343,6 +369,10 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
       } catch (e) {
         print('Failed to fetch air quality data: $e');
       }
+
+      // Store in cache
+      _weatherCache[cacheKey] = weather;
+
       setState(() {
         _weatherData = weather;
         _lastUpdated = DateTime.now();
@@ -357,7 +387,10 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
   Future<void> _refreshWeather() async {
     if (_selectedLocation == null) return;
     setState(() => _isRefreshing = true);
-    await _fetchWeather();
+
+    // Pass forceRefresh: true to bypass the cache
+    await _fetchWeather(forceRefresh: true);
+
     if (mounted) {
       setState(() {
         _isRefreshing = false;
@@ -373,6 +406,14 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
       return null;
     }
     return _locations[index];
+  }
+
+  @override
+  void didUpdateWidget(WeatherHomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.useMetric != widget.useMetric) {
+      _weatherCache.clear();
+    }
   }
 
   @override
@@ -473,39 +514,35 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: ListView.separated(
+                    child: ListView.builder(
+                      // Changed from ListView.separated for better performance
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       padding: EdgeInsets.zero,
                       itemCount: _locations.length,
-                      separatorBuilder: (context, index) => Divider(
-                        height: 1,
-                        indent: 16,
-                        endIndent: 16,
-                        color: Theme.of(context).dividerColor.withOpacity(0.5),
-                      ),
                       itemBuilder: (context, index) {
-                        // Simple safe check
-                        if (index >= _locations.length) {
-                          return const SizedBox.shrink();
-                        }
+                        // Avoid index bounds check in hot path
+                        final location = _locations[index];
 
-                        return ListTile(
-                          title: Text(
-                            _locations[index].displayName,
-                            style: Theme.of(context).textTheme.bodyLarge,
-                          ),
-                          trailing: Icon(
-                            Icons.arrow_forward_ios,
-                            size: 16,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                          onTap: () {
-                            // Simpler bound check
-                            if (index < _locations.length) {
-                              _selectLocation(_locations[index]);
-                            }
-                          },
+                        return Column(
+                          key: ValueKey(
+                              'location_${location.latitude}_${location.longitude}'),
+                          children: [
+                            ListTile(
+                              title: Text(
+                                _locations[index].displayName,
+                                style: Theme.of(context).textTheme.bodyLarge,
+                              ),
+                              trailing: Icon(
+                                Icons.arrow_forward_ios,
+                                size: 16,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              onTap: _createLocationSelectCallback(location),
+                            ),
+                            if (index < _locations.length - 1)
+                              _buildDivider(context),
+                          ],
                         );
                       },
                     ),
@@ -514,7 +551,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
               if (_isLoading) ...[
                 const CurrentWeatherSkeleton(),
                 const ForecastSkeleton(),
-                const SizedBox(height: 16),
+                sizedBoxHeight16,
                 const ForecastSkeleton(),
                 const AirQualitySkeletonWidget(),
               ] else if (_weatherData != null) ...[
@@ -550,5 +587,19 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
         ),
       ),
     );
+  }
+
+  Widget _buildDivider(BuildContext context) {
+    return Divider(
+      height: 1,
+      indent: 16,
+      endIndent: 16,
+      color: Theme.of(context).dividerColor.withOpacity(0.5),
+    );
+  }
+
+  VoidCallback _createLocationSelectCallback(Location location) {
+    final key = '${location.latitude}_${location.longitude}';
+    return _locationCallbacks[key] ??= () => _selectLocation(location);
   }
 }
