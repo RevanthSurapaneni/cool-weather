@@ -293,10 +293,26 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
       _locations = [];
     });
     try {
-      final locations = await WeatherService.geocodeLocation(query);
+      final searchResults = await WeatherService.geocodeLocation(query);
+
+      // Convert AppLocation objects to Location objects
+      final List<Location> convertedLocations = [];
+
+      for (var result in searchResults) {
+        // Always create a new Location from the properties
+        // rather than trying to cast directly
+        convertedLocations.add(Location(
+          name: result.name,
+          latitude: result.latitude,
+          longitude: result.longitude,
+          country: result.country,
+          state: result.state,
+        ));
+      }
+
       setState(() {
-        _locations = locations;
-        if (locations.isEmpty && _selectedLocation == null) {
+        _locations = convertedLocations;
+        if (_locations.isEmpty && _selectedLocation == null) {
           _errorMessage = 'No locations found';
         }
       });
@@ -355,6 +371,13 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
       _mainScrollController.animateTo(0,
           duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     }
+  }
+
+  Location? _getLocationSafely(int index) {
+    if (_locations.isEmpty || index < 0 || index >= _locations.length) {
+      return null;
+    }
+    return _locations[index];
   }
 
   @override
@@ -445,6 +468,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                   ),
                 ),
               ),
+              // Update the locations list section with multiple safeguards
               if (_locations.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
@@ -454,29 +478,71 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      padding: EdgeInsets.zero,
-                      itemCount: _locations.length,
-                      separatorBuilder: (context, index) => Divider(
-                        height: 1,
-                        indent: 16,
-                        endIndent: 16,
-                        color: Theme.of(context).dividerColor.withOpacity(0.5),
-                      ),
-                      itemBuilder: (context, index) {
-                        return ListTile(
-                          title: Text(
-                            _locations[index].displayName,
-                            style: Theme.of(context).textTheme.bodyLarge,
-                          ),
-                          trailing: Icon(
-                            Icons.arrow_forward_ios,
-                            size: 16,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                          onTap: () => _selectLocation(_locations[index]),
+                    child: Builder(
+                      builder: (context) {
+                        // Create a local copy of the locations list to prevent concurrent modification issues
+                        final displayLocations =
+                            List<Location>.from(_locations);
+                        if (displayLocations.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          padding: EdgeInsets.zero,
+                          itemCount: displayLocations.length,
+                          itemBuilder: (context, index) {
+                            try {
+                              // Triple check the index bounds
+                              if (index < 0 ||
+                                  index >= displayLocations.length) {
+                                return const SizedBox.shrink();
+                              }
+
+                              final location = displayLocations[index];
+                              return Column(
+                                children: [
+                                  ListTile(
+                                    title: Text(
+                                      location.displayName,
+                                      style:
+                                          Theme.of(context).textTheme.bodyLarge,
+                                    ),
+                                    trailing: Icon(
+                                      Icons.arrow_forward_ios,
+                                      size: 16,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                    ),
+                                    onTap: () {
+                                      // Check one more time if the index is still valid
+                                      // and that the list hasn't been modified
+                                      if (mounted &&
+                                          _locations.isNotEmpty &&
+                                          index < _locations.length) {
+                                        _selectLocation(_locations[index]);
+                                      }
+                                    },
+                                  ),
+                                  if (index < displayLocations.length - 1)
+                                    Divider(
+                                      height: 1,
+                                      indent: 16,
+                                      endIndent: 16,
+                                      color: Theme.of(context)
+                                          .dividerColor
+                                          .withOpacity(0.5),
+                                    ),
+                                ],
+                              );
+                            } catch (e) {
+                              // Catch any exception and provide a fallback
+                              print(
+                                  'Error rendering location at index $index: $e');
+                              return const SizedBox.shrink();
+                            }
+                          },
                         );
                       },
                     ),

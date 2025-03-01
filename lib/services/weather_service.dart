@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../utils/weather_utils.dart';
 import '../models/weather_model.dart';
+import '../models/app_location.dart';
 
 class WeatherService {
   static const String _geocodingBaseUrl =
@@ -26,7 +27,11 @@ class WeatherService {
     return Uri.parse(baseUrl).replace(queryParameters: params).toString();
   }
 
-  static Future<List<Location>> geocodeLocation(String query) async {
+  // Update to use AppLocation instead of Location
+  // Add better error handling for web
+
+  // Example implementation for geocoding that would be more web-friendly:
+  static Future<List<AppLocation>> geocodeLocation(String query) async {
     final params = {
       'name': query,
       'count': '10',
@@ -46,13 +51,15 @@ class WeatherService {
         }
 
         return results
-            .map((e) => Location.fromJson(e as Map<String, dynamic>))
+            .map((e) => AppLocation.fromJson(e as Map<String, dynamic>))
             .toList();
       } else {
         throw Exception('API error: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception('Failed to geocode location: $e');
+      print('Geocoding error: $e');
+      // Return empty list rather than throwing to be more robust
+      return [];
     }
   }
 
