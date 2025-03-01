@@ -6,6 +6,7 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A weather application">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,8 +14,8 @@
   <meta name="apple-mobile-web-app-title" content="weather">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
-  <!-- Add these lines for geolocation permissions on HTTPS -->
-  <meta http-equiv="Content-Security-Policy" content="default-src * self blob: data: gap:; style-src * self 'unsafe-inline' blob: data: gap:; script-src * 'self' 'unsafe-eval' 'unsafe-inline' blob: data: gap:; object-src * 'self' blob: data: gap:; img-src * self 'unsafe-inline' blob: data: gap:; connect-src self * 'unsafe-inline' blob: data: gap:; frame-src * self blob: data: gap:;">  
+  <!-- Fix the CSP policy to correctly quote 'self' -->
+  <meta http-equiv="Content-Security-Policy" content="default-src * 'self' blob: data: gap:; style-src * 'self' 'unsafe-inline' blob: data: gap:; script-src * 'self' 'unsafe-eval' 'unsafe-inline' blob: data: gap:; object-src * 'self' blob: data: gap:; img-src * 'self' 'unsafe-inline' blob: data: gap:; connect-src 'self' * 'unsafe-inline' blob: data: gap:; frame-src * 'self' blob: data: gap:;">
 
   <link rel="icon" type="image/png" href="favicon.png"/>
 
@@ -22,20 +23,59 @@
   <link rel="manifest" href="manifest.json">
 
   <style>
-    html,
     body {
-      overscroll-behavior-x: none;
+      background-color: #121212;
+      margin: 0;
+      overflow-x: hidden;
+    }
+    
+    #loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #121212;
+      z-index: 9999;
+    }
+    
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      border: 5px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #2196F3;
+      animation: spin 1s infinite linear;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   </style>
 
   <script>
-    // The value below is injected by flutter build, do not touch.
-    const serviceWorkerVersion = "{{flutter_service_worker_version}}";
+    // Fix the serviceWorkerVersion definition
+    var serviceWorkerVersion = null;
+    
+    // Fix for older browsers
+    if (typeof window.navigator.serviceWorker !== 'undefined') {
+      serviceWorkerVersion = 'unknown';
+    }
   </script>
+  
   <!-- This script adds the flutter initialization JS code -->
   <script src="flutter.js" defer></script>
 </head>
 <body>
+  <!-- Add loading indicator -->
+  <div id="loading">
+    <div class="spinner"></div>
+  </div>
+
   <!-- Add this for improved geolocation -->
   <script>
     // For Geolocator web support
@@ -43,12 +83,50 @@
       navigator.geolocation = {};
     }
   </script>
+  
   <script>
-    window.addEventListener('load', function(ev) {
-      // Download main.dart.js
+    window.addEventListener('load', function() {
+      // Hide the loading indicator once Flutter is initialized
+      var loadingIndicator = document.getElementById('loading');
+      
+      // Fix Flutter initialization for web
+      _flutter = {
+        loader: {
+          load: function(config) {
+            // Download main.dart.js
+            var scriptLoaded = false;
+            var scriptTag = document.createElement('script');
+            scriptTag.src = 'main.dart.js';
+            scriptTag.type = 'application/javascript';
+            document.body.append(scriptTag);
+            
+            scriptTag.addEventListener('load', function() {
+              scriptLoaded = true;
+              console.log('App loaded successfully');
+              if (loadingIndicator) {
+                loadingIndicator.remove();
+              }
+            });
+            
+            scriptTag.addEventListener('error', function(error) {
+              console.error('Error loading app:', error);
+            });
+            
+            // Remove loading indicator after timeout even if script fails
+            setTimeout(function() {
+              if (!scriptLoaded && loadingIndicator) {
+                console.warn('Loading took too long, removing indicator');
+                loadingIndicator.remove();
+              }
+            }, 10000);
+          }
+        }
+      };
+      
+      // Initialize Flutter
       _flutter.loader.load({
         serviceWorker: {
-          serviceWorkerVersion: serviceWorkerVersion,
+          serviceWorkerVersion: serviceWorkerVersion
         }
       });
     });
