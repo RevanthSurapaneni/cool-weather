@@ -9,14 +9,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  http: ^1.0.0
+  cupertino_icons: ^1.0.2
+  http: ^1.1.0
   intl: ^0.17.0
   geolocator: ^11.0.0
   geolocator_web: ^3.0.0
   weather_icons: ^3.0.0
   shared_preferences: ^2.2.2
   shared_preferences_web: ^2.2.2
-  cupertino_icons: ^1.0.8
 
 dev_dependencies:
   flutter_test:

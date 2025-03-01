@@ -70,7 +70,7 @@ class _ShimmerEffectState extends State<ShimmerEffect>
 }
 
 class Matrix4Transform extends GradientTransform {
-  Matrix4Transform(this.value);
+  const Matrix4Transform(this.value);
   final double value;
 
   @override

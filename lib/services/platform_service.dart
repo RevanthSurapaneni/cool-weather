@@ -3,7 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 
 class PlatformService {
-  static bool _permissionRequested = false;
+  static final bool _permissionRequested = false;
 
   static Future<bool> checkLocationPermission() async {
     if (!kIsWeb) {

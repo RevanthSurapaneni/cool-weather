@@ -1,12 +1,25 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import '../utils/weather_utils.dart';
+import '../models/weather_model.dart';
 
 class WeatherService {
-  // Fix CORS issues for web
+  static const String _geocodingBaseUrl =
+      'https://geocoding-api.open-meteo.com/v1/search';
+  static const String _weatherBaseUrl =
+      'https://api.open-meteo.com/v1/forecast';
+  static const String _airQualityBaseUrl =
+      'https://air-quality-api.open-meteo.com/v1/air-quality';
+
+  final String apiKey;
+  final String baseUrl = 'https://api.openweathermap.org/data/2.5/weather';
+
+  WeatherService({required this.apiKey});
+
+  // CORS handling for web platform
   static String _getUrl(String baseUrl, Map<String, String> params) {
     if (kIsWeb) {
-      // Use a reliable CORS proxy or your own backend
       final Uri uri = Uri.parse(baseUrl).replace(queryParameters: params);
       return 'https://api.allorigins.win/raw?url=${Uri.encodeComponent(uri.toString())}';
     }
@@ -20,33 +33,51 @@ class WeatherService {
       'language': 'en',
     };
 
-    final url =
-        _getUrl('https://geocoding-api.open-meteo.com/v1/search', params);
+    try {
+      final url = _getUrl(_geocodingBaseUrl, params);
+      final response = await http.get(Uri.parse(url));
 
-    final response = await http.get(Uri.parse(url));
-    if (response.statusCode == 200) {
-      final results = jsonDecode(response.body)['results'] as List?;
-      if (results == null || results.isEmpty) {
-        throw Exception('No locations found');
+      if (response.statusCode == 200) {
+        final dynamic data = jsonDecode(response.body);
+        final List? results = data['results'] as List?;
+
+        if (results == null || results.isEmpty) {
+          return [];
+        }
+
+        return results
+            .map((e) => Location.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } else {
+        throw Exception('API error: ${response.statusCode}');
       }
-      return results.map((e) => Location.fromJson(e)).toList();
-    } else {
-      throw Exception('Failed to geocode location');
+    } catch (e) {
+      throw Exception('Failed to geocode location: $e');
     }
   }
 
   static Future<List<Location>> reverseGeocodeLocation(
       double lat, double lon) async {
-    final response = await http.get(Uri.parse(
-        'https://geocoding-api.open-meteo.com/v1/reverse?latitude=$lat&longitude=$lon&language=en&count=1'));
-    if (response.statusCode == 200) {
-      final results = jsonDecode(response.body)['results'] as List?;
-      if (results == null || results.isEmpty) {
-        return [];
+    try {
+      final response = await http.get(Uri.parse(
+          '$_geocodingBaseUrl?latitude=$lat&longitude=$lon&language=en&count=1'));
+
+      if (response.statusCode == 200) {
+        final dynamic data = jsonDecode(response.body);
+        final List? results = data['results'] as List?;
+
+        if (results == null || results.isEmpty) {
+          return [];
+        }
+
+        return results
+            .map((e) => Location.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } else {
+        throw Exception('API error: ${response.statusCode}');
       }
-      return results.map((e) => Location.fromJson(e)).toList();
-    } else {
-      throw Exception('Failed to reverse geocode location');
+    } catch (e) {
+      throw Exception('Failed to reverse geocode: $e');
     }
   }
 
@@ -59,14 +90,17 @@ class WeatherService {
       'timezone': 'auto',
     };
 
-    final url = _getUrl(
-        'https://air-quality-api.open-meteo.com/v1/air-quality', params);
+    try {
+      final url = _getUrl(_airQualityBaseUrl, params);
+      final response = await http.get(Uri.parse(url));
 
-    final response = await http.get(Uri.parse(url));
-    if (response.statusCode == 200) {
-      return AirQualityData.fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception('Failed to load air quality data');
+      if (response.statusCode == 200) {
+        return AirQualityData.fromJson(jsonDecode(response.body));
+      } else {
+        throw Exception('API error: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Failed to load air quality data: $e');
     }
   }
 
@@ -76,23 +110,51 @@ class WeatherService {
       'latitude': lat.toString(),
       'longitude': lon.toString(),
       'current_weather': 'true',
-      'hourly':
-          'temperature_2m,weathercode,precipitation_probability,apparent_temperature,wind_speed_10m,wind_direction_10m,uv_index,is_day',
-      'daily':
-          'weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max,wind_speed_10m_max',
+      'hourly': 'temperature_2m,weathercode,precipitation_probability,'
+          'apparent_temperature,wind_speed_10m,wind_direction_10m,'
+          'uv_index,is_day,relative_humidity_2m,precipitation,cloud_cover,'
+          'visibility',
+      'daily': 'weathercode,temperature_2m_max,temperature_2m_min,sunrise,'
+          'sunset,uv_index_max,precipitation_probability_max,wind_speed_10m_max',
       'timezone': 'auto',
-      // Fix: When useMetric is true, we want metric units (celsius, kmh, mm)
-      // When useMetric is false, we want imperial units (fahrenheit, mph, inch)
-      'temperature_unit': !useMetric ? 'fahrenheit' : 'celsius',
-      'windspeed_unit': !useMetric ? 'mph' : 'kmh',
-      'precipitation_unit': !useMetric ? 'inch' : 'mm',
+      'temperature_unit': useMetric ? 'celsius' : 'fahrenheit',
+      'windspeed_unit': useMetric ? 'kmh' : 'mph',
+      'precipitation_unit': useMetric ? 'mm' : 'inch',
+      // Decrease forecast days from 16 to 15 to avoid potential array bound issues
+      'forecast_days': '15',
     };
 
-    final url = _getUrl('https://api.open-meteo.com/v1/forecast', params);
+    try {
+      final url = _getUrl(_weatherBaseUrl, params);
+      final response = await http.get(Uri.parse(url));
 
+      if (response.statusCode == 200) {
+        return WeatherData.fromJson(jsonDecode(response.body));
+      } else {
+        throw Exception('API error: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Failed to load weather data: $e');
+    }
+  }
+
+  Future<WeatherModel> getWeatherByCity(String city) async {
+    final url = '$baseUrl?q=$city&appid=$apiKey&units=metric';
     final response = await http.get(Uri.parse(url));
+
     if (response.statusCode == 200) {
-      return WeatherData.fromJson(jsonDecode(response.body));
+      return WeatherModel.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to load weather data');
+    }
+  }
+
+  Future<WeatherModel> getWeatherByLocation(double lat, double lon) async {
+    final url = '$baseUrl?lat=$lat&lon=$lon&appid=$apiKey&units=metric';
+    final response = await http.get(Uri.parse(url));
+
+    if (response.statusCode == 200) {
+      return WeatherModel.fromJson(jsonDecode(response.body));
     } else {
       throw Exception('Failed to load weather data');
     }
@@ -188,11 +250,15 @@ class WeatherData {
     });
 
     try {
+      // Sanitize the weather code immediately when parsing
+      final dynamic rawCode = json['current_weather']['weathercode'];
+      final int safeWeatherCode = WeatherUtils.sanitizeWeatherCode(rawCode);
+
       return WeatherData(
         currentTemp: (json['current_weather']['temperature'] as num).toDouble(),
         currentWindSpeed:
             (json['current_weather']['windspeed'] as num).toDouble(),
-        currentWeatherCode: json['current_weather']['weathercode'] as int,
+        currentWeatherCode: safeWeatherCode, // Use sanitized code
         hourly: json['hourly'] as Map<String, dynamic>,
         daily: json['daily'] as Map<String, dynamic>,
         sunrise: DateTime.parse(json['daily']['sunrise'][todayIndex]),

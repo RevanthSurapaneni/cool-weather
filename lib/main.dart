@@ -81,8 +81,7 @@ class _MyAppState extends State<MyApp> {
         colorScheme: ColorScheme.dark(
           primary: Colors.blue,
           secondary: Colors.blueAccent,
-          surface: Colors.grey.shade900,
-          background: const Color(0xFF121212), // Material 3 dark background
+          surface: Colors.grey.shade900, // Material 3 dark background
         ),
         useMaterial3: true,
         fontFamily: 'Poppins',
@@ -497,19 +496,14 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                   selectedLocation: _selectedLocation,
                   useMetric: widget.useMetric,
                 ),
-                buildHourlyForecast(
-                  _weatherData!.hourly,
-                  _weatherData!.currentWeatherTime,
-                  _weatherData!.sunrise,
-                  _weatherData!.sunset,
-                  _hourlyController,
-                  widget.useMetric,
+                WeatherChart(
+                  hourly: _weatherData!.hourly,
+                  currentTime: _weatherData!.currentWeatherTime,
+                  useMetric: widget.useMetric,
                 ),
-                const SizedBox(height: 16),
-                buildDailyForecast(
-                  _weatherData!.daily,
-                  _dailyController,
-                  widget.useMetric,
+                WeeklyWeatherChart(
+                  daily: _weatherData!.daily,
+                  useMetric: widget.useMetric,
                 ),
                 if (_weatherData?.airQualityData != null)
                   AirQualityWidget(data: _weatherData!.airQualityData!),
