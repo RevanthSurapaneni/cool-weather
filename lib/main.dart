@@ -92,13 +92,6 @@ class _MyAppState extends State<MyApp> {
         ),
         // Fixed: Use cardTheme correctly for web compatibility
         cardColor: Colors.grey.shade900,
-        cardTheme: const CardTheme().copyWith(
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          // Note: Color is set via cardColor above instead of here
-        ),
         scaffoldBackgroundColor:
             const Color(0xFF121212), // Material 3 dark background
         textTheme: TextTheme(
