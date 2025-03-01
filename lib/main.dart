@@ -90,12 +90,14 @@ class _MyAppState extends State<MyApp> {
           elevation: 0,
           backgroundColor: Colors.grey.shade900,
         ),
-        cardTheme: CardTheme(
+        // Fixed: Use cardTheme correctly for web compatibility
+        cardColor: Colors.grey.shade900,
+        cardTheme: const CardTheme().copyWith(
           elevation: 4,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          color: Colors.grey.shade900,
+          // Note: Color is set via cardColor above instead of here
         ),
         scaffoldBackgroundColor:
             const Color(0xFF121212), // Material 3 dark background
