@@ -468,7 +468,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                   ),
                 ),
               ),
-              // Update the locations list section with multiple safeguards
+              // Replace the card builder for location search results with a simpler implementation
               if (_locations.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
@@ -478,69 +478,37 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: Builder(
-                      builder: (context) {
-                        // Create a local copy of the locations list to prevent concurrent modification issues
-                        final displayLocations =
-                            List<Location>.from(_locations);
-                        if (displayLocations.isEmpty) {
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: EdgeInsets.zero,
+                      itemCount: _locations.length,
+                      separatorBuilder: (context, index) => Divider(
+                        height: 1,
+                        indent: 16,
+                        endIndent: 16,
+                        color: Theme.of(context).dividerColor.withOpacity(0.5),
+                      ),
+                      itemBuilder: (context, index) {
+                        // Simple safe check
+                        if (index >= _locations.length) {
                           return const SizedBox.shrink();
                         }
 
-                        return ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          padding: EdgeInsets.zero,
-                          itemCount: displayLocations.length,
-                          itemBuilder: (context, index) {
-                            try {
-                              // Triple check the index bounds
-                              if (index < 0 ||
-                                  index >= displayLocations.length) {
-                                return const SizedBox.shrink();
-                              }
-
-                              final location = displayLocations[index];
-                              return Column(
-                                children: [
-                                  ListTile(
-                                    title: Text(
-                                      location.displayName,
-                                      style:
-                                          Theme.of(context).textTheme.bodyLarge,
-                                    ),
-                                    trailing: Icon(
-                                      Icons.arrow_forward_ios,
-                                      size: 16,
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                    ),
-                                    onTap: () {
-                                      // Check one more time if the index is still valid
-                                      // and that the list hasn't been modified
-                                      if (mounted &&
-                                          _locations.isNotEmpty &&
-                                          index < _locations.length) {
-                                        _selectLocation(_locations[index]);
-                                      }
-                                    },
-                                  ),
-                                  if (index < displayLocations.length - 1)
-                                    Divider(
-                                      height: 1,
-                                      indent: 16,
-                                      endIndent: 16,
-                                      color: Theme.of(context)
-                                          .dividerColor
-                                          .withOpacity(0.5),
-                                    ),
-                                ],
-                              );
-                            } catch (e) {
-                              // Catch any exception and provide a fallback
-                              print(
-                                  'Error rendering location at index $index: $e');
-                              return const SizedBox.shrink();
+                        return ListTile(
+                          title: Text(
+                            _locations[index].displayName,
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                          trailing: Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          onTap: () {
+                            // Simpler bound check
+                            if (index < _locations.length) {
+                              _selectLocation(_locations[index]);
                             }
                           },
                         );
